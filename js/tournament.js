@@ -12,10 +12,10 @@ const Tournament = (() => {
   const create = (teams, options={}) => {
     if(!Array.isArray(teams)||teams.length<2||teams.length%2!==0) throw new Error('O torneio precisa de uma quantidade par de equipes.');
     if(teams.some(t=>!t?.name||!Array.isArray(t.members)||t.members.length===0)) throw new Error('Todas as equipes precisam de nome e participantes.');
-    bracket={teams:teams.map(t=>({...t,members:[...t.members]})),rounds:[],champion:null,format:options.format||'Livre',teamSize:options.teamSize||1,createdAt:Date.now(),version:3};
-    bracket.rounds.push(_makeRound(_shuffle(bracket.teams))); return bracket;
+    bracket={teams:teams.map(t=>({...t,members:[...t.members],available:t.available!==false})),rounds:[],champion:null,format:options.format||'Livre',teamSize:options.teamSize||1,createdAt:Date.now(),version:4};
+    bracket.rounds.push(_makeRound(options.manual?bracket.teams:_shuffle(bracket.teams))); return bracket;
   };
-  const load = () => { const saved=DB.getTournament(); bracket=saved?.version===3?saved:null; return bracket; };
+  const load = () => { const saved=DB.getTournament(); bracket=saved&&[3,4].includes(saved.version)?saved:null;if(bracket){bracket.version=4;(bracket.teams||[]).forEach(t=>{if(typeof t.available!=='boolean')t.available=true;});}return bracket; };
   const reset = () => { bracket=null; };
   const _label = team => team?.name||'Equipe';
   const _roster = team => (team?.members||[]).join(', ');
@@ -51,14 +51,47 @@ const Tournament = (() => {
     r.directAdvance=selected;r.awaitingDirectAdvance=false;bracket.rounds=bracket.rounds.slice(0,ri+1);bracket.rounds.push(_makeRound(_shuffle(remaining),[selected]));
     return bracket;
   };
+  const _editable = position => {
+    const round=bracket?.rounds?.[position?.roundIdx],match=round?.matches?.[position?.matchIdx];
+    return !!match&&!match.winner&&!match.result&&position.roundIdx===bracket.rounds.length-1;
+  };
+  const setAvailability = (teamId,available) => {
+    const team=bracket?.teams?.find(t=>t.id===teamId);if(!team)return null;
+    team.available=!!available;
+    (bracket.rounds||[]).forEach(r=>[...(r.matches||[]).flatMap(m=>[m.t1,m.t2]),...(r.carried||[])].forEach(t=>{if(t?.id===teamId)t.available=!!available;}));
+    return bracket;
+  };
+  const swapTeams = (a,b,{lock=true}={}) => {
+    if(!_editable(a)||!_editable(b))return null;const ma=bracket.rounds[a.roundIdx].matches[a.matchIdx],mb=bracket.rounds[b.roundIdx].matches[b.matchIdx];
+    const ta=ma[a.side],tb=mb[b.side];if(!ta||!tb)return null;ma[a.side]=tb;mb[b.side]=ta;
+    if(lock){ma.manual=true;mb.manual=true;}return bracket;
+  };
+  const setRoundOrder = (roundIdx,teamIds) => {
+    const round=bracket?.rounds?.[roundIdx];if(!round||roundIdx!==bracket.rounds.length-1||round.matches.some(m=>m.winner||m.result))return null;
+    const current=round.matches.flatMap(m=>[m.t1,m.t2]),byId=new Map(current.map(t=>[t.id,t]));
+    if(teamIds.length!==current.length||new Set(teamIds).size!==current.length||teamIds.some(id=>!byId.has(id)))return null;
+    round.matches.forEach((m,i)=>{m.t1=byId.get(teamIds[i*2]);m.t2=byId.get(teamIds[i*2+1]);m.manual=true;});return bracket;
+  };
+  const arrangeSmart = roundIdx => {
+    const round=bracket?.rounds?.[roundIdx];if(!round||roundIdx!==bracket.rounds.length-1||round.matches.some(m=>m.winner||m.result))return null;
+    const open=round.matches.filter(m=>!m.manual),pool=_shuffle(open.flatMap(m=>[m.t1,m.t2]));
+    const yes=pool.filter(t=>t.available!==false),no=pool.filter(t=>t.available===false),ordered=[];
+    while(yes.length>=2)ordered.push(yes.pop(),yes.pop());while(no.length>=2)ordered.push(no.pop(),no.pop());ordered.push(...yes,...no);
+    open.forEach((m,i)=>{m.t1=ordered[i*2];m.t2=ordered[i*2+1];});return bracket;
+  };
+  const randomizeRound = roundIdx => {
+    const round=bracket?.rounds?.[roundIdx];if(!round||roundIdx!==bracket.rounds.length-1||round.matches.some(m=>m.winner||m.result))return null;
+    const open=round.matches.filter(m=>!m.manual),pool=_shuffle(open.flatMap(m=>[m.t1,m.t2]));open.forEach((m,i)=>{m.t1=pool[i*2];m.t2=pool[i*2+1];});return bracket;
+  };
   const render = () => {
     if(!bracket)return '<p style="color:var(--muted);text-align:center;padding:40px">Nenhum torneio ativo.</p>';
     let html='<div class="bracket-scroll"><div class="bracket-wrap bracket-wrap-dynamic">';
     bracket.rounds.forEach((r,ri)=>{
       html+=`<div class="bracket-col"><div class="bracket-round-label">${r.name}</div><div class="bracket-round-body">`;
-      const renderMatch=(m,mi)=>{const w1=m.winner?.id===m.t1.id,w2=m.winner?.id===m.t2.id;const result=m.result;return `<div class="match-card ${result?'match-card-result':''}">
-        <div class="match-slot ${w1?'match-winner':m.winner?'match-loser':''}"><span class="match-seed">${mi*2+1}</span><span class="match-team-name" title="${_escape(_roster(m.t1))}">${_escape(_label(m.t1))}</span>${w1?'<span class="match-crown">✓</span>':''}</div>
-        <div class="match-slot ${w2?'match-winner':m.winner?'match-loser':''}"><span class="match-seed">${mi*2+2}</span><span class="match-team-name" title="${_escape(_roster(m.t2))}">${_escape(_label(m.t2))}</span>${w2?'<span class="match-crown">✓</span>':''}</div>
+      const renderMatch=(m,mi)=>{const w1=m.winner?.id===m.t1.id,w2=m.winner?.id===m.t2.id;const result=m.result,canEdit=Storage.isAdmin()&&!m.winner&&ri===bracket.rounds.length-1;const slot=(t,side,win,seed)=>`<div class="match-slot ${win?'match-winner':m.winner?'match-loser':''} ${canEdit?'match-slot-editable':''}" ${canEdit?`onclick="UI.selectBracketTeam(${ri},${mi},'${side}')" role="button" tabindex="0"`:''}><span class="match-seed">${seed}</span><span class="team-availability ${t.available===false?'team-unavailable':'team-available'}" title="${t.available===false?'Indisponível':'Disponível'}">${t.available===false?'🔴':'🟢'}</span><span class="match-team-name" title="${_escape(_roster(t))}">${_escape(_label(t))}</span>${win?'<span class="match-crown">✓</span>':''}</div>`;return `<div class="match-card ${result?'match-card-result':''} ${m.manual?'match-manual':''}">
+        ${slot(m.t1,'t1',w1,mi*2+1)}
+        ${slot(m.t2,'t2',w2,mi*2+2)}
+        ${m.manual?'<div class="manual-match-label">🔒 Definido manualmente</div>':''}
         ${result?`<div class="match-result-summary">${result.kills.map(entry=>`<span>${_escape(entry.player)} <b>${entry.kills}</b></span>`).join('')}<small>⭐ MVP: ${result.mvps.map(_escape).join(', ')}</small></div>`:''}
         ${Storage.isAdmin()?`<button class="match-result-btn" onclick="UI.openTournamentResult(${ri},${mi})">${result?'Editar resultado':'Registrar resultado'}</button>`:''}
       </div>`;};
@@ -84,5 +117,5 @@ const Tournament = (() => {
     const maxKills=ranking[0]?.kills??0,maxMvps=Math.max(0,...ranking.map(p=>p.mvps));
     return {ranking,matchMvps,topKillers:ranking.filter(p=>p.kills===maxKills&&maxKills>0),overallMvps:ranking.filter(p=>p.mvps===maxMvps&&maxMvps>0)};
   };
-  return {create,load,reset,setWinner,setResult,setDirectAdvance,render,getStats,getBracket:()=>bracket};
+  return {create,load,reset,setWinner,setResult,setDirectAdvance,setAvailability,swapTeams,setRoundOrder,arrangeSmart,randomizeRound,render,getStats,getBracket:()=>bracket};
 })();

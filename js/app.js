@@ -1035,6 +1035,26 @@ const UI = (() => {
   // ══════════════════════════════════════════════════════════════════════════
   //  TAB: TORNEIO
   // ══════════════════════════════════════════════════════════════════════════
+  let bracketSwapSource = null;
+  const tournamentAdminPanel = bracket => {
+    if (!Storage.isAdmin() || !bracket?.rounds?.length) return '';
+    const ri = bracket.rounds.length - 1, round = bracket.rounds[ri];
+    const editable = round.matches.every(match => !match.winner && !match.result);
+    const slots = round.matches.flatMap((match,mi)=>[['t1',match.t1],['t2',match.t2]].map(([side,team])=>({mi,side,team})));
+    return `<div class="card tournament-bracket-tools">
+      <div class="card-head"><div class="card-title"><div class="card-icon">🧩</div> Montagem dos confrontos</div><span class="save-live-label">● Salvo ao vivo</span></div>
+      <p class="field-help">Defina a disponibilidade e ajuste somente as posições necessárias. Confrontos definidos manualmente ficam protegidos da sugestão inteligente.</p>
+      <div class="team-status-grid">${(bracket.teams||[]).map(team=>`<button class="team-status-button ${team.available===false?'is-unavailable':'is-available'}" onclick="UI.toggleTournamentAvailability('${team.id}')"><span>${team.available===false?'🔴':'🟢'}</span><strong>${escapeHTML(team.name)}</strong><small>${team.available===false?'Indisponível':'Disponível'}</small></button>`).join('')}</div>
+      ${editable?`<div class="bracket-tool-actions">
+        <button class="btn btn-ghost btn-sm" onclick="UI.randomizeTournamentRound(${ri})">🎲 Sorteio automático</button>
+        <button class="btn btn-ghost btn-sm" onclick="UI.smartArrangeTournament(${ri})">✨ Organização inteligente</button>
+        <button class="btn btn-ghost btn-sm" onclick="UI.toggleManualBracketEditor()">✍️ Montagem manual</button>
+        ${bracketSwapSource?'<button class="btn btn-ghost btn-sm" onclick="UI.cancelBracketSwap()">✕ Cancelar troca</button>':''}
+      </div>
+      <div class="swap-guidance ${bracketSwapSource?'swap-active':''}">${bracketSwapSource?'Agora clique na equipe que deve trocar de posição.':'Para trocar apenas duas posições, clique na primeira equipe e depois na segunda.'}</div>
+      <div class="manual-bracket-editor hidden" id="manual-bracket-editor"><div class="manual-bracket-grid">${slots.map((slot,index)=>`<label><span>Posição ${index+1}</span><select class="field-sm manual-bracket-select">${slots.map(option=>`<option value="${option.team.id}" ${option.team.id===slot.team.id?'selected':''}>${option.team.available===false?'🔴':'🟢'} ${escapeHTML(option.team.name)}</option>`).join('')}</select></label>`).join('')}</div><button class="btn btn-primary btn-full" onclick="UI.saveManualBracket(${ri})">Salvar montagem manual</button></div>`:'<p class="field-help">A rodada atual já possui resultados e não pode mais ser reorganizada.</p>'}
+    </div>`;
+  };
   const renderTournamentStats = () => {
     const { ranking, overallMvps, topKillers } = Tournament.getStats();
     if (!ranking.length) return '';
@@ -1124,7 +1144,8 @@ const UI = (() => {
           <div class="card-title"><div class="card-icon">🏆</div> Torneio em andamento</div>
           ${Storage.isAdmin() ? '<button class="btn btn-ghost btn-sm" onclick="UI.resetTournament()">🗑 Zerar torneio</button>' : ''}
         </div>
-        ${!Storage.isAdmin() ? `<p class="hint">💡 <span>Apenas o admin pode definir o vencedor de cada partida.</span></p>` : ''}`;
+        ${!Storage.isAdmin() ? `<p class="hint">💡 <span>Apenas o admin pode definir o vencedor de cada partida.</span></p>` : ''}
+        ${tournamentAdminPanel(saved)}`;
     } else {
       setupHtml = `<div class="card"><div class="empty-state"><div class="empty-icon">🏆</div><h3>Nenhum torneio ativo</h3><p>Quando o admin criar o chaveamento, ele aparecerá aqui automaticamente.</p></div></div>`;
     }
@@ -1142,6 +1163,7 @@ const UI = (() => {
   const getTeamEditorValues = () => [...document.querySelectorAll('.tournament-team-entry')].map(entry => ({
     name: entry.querySelector('.tournament-team-name')?.value || '',
     roster: entry.querySelector('.tournament-roster-input')?.value || '',
+    available: entry.querySelector('.tournament-team-availability')?.checked !== false,
   }));
   const renderTournamentTeamEditor = (minimum = 2, values = null) => {
     const editor = $('tournament-team-editor'); if (!editor) return;
@@ -1155,9 +1177,13 @@ const UI = (() => {
     const entry = document.createElement('div'); entry.className = 'tournament-team-entry';
     entry.innerHTML = `<div class="team-entry-title"><strong>Equipe</strong><button class="team-remove-btn" type="button" aria-label="Remover equipe">✕</button></div>
       <div class="manual-team-name-field hidden"><label class="field-label">Nome da equipe</label><input class="field-full tournament-team-name" maxlength="40" placeholder="Ex: Os Brabos"></div>
-      <label class="field-label">Participantes</label><input class="field-full tournament-roster-input" maxlength="240" placeholder="Ryan, João">`;
+      <label class="field-label">Participantes</label><input class="field-full tournament-roster-input" maxlength="240" placeholder="Ryan, João">
+      <label class="tournament-availability-toggle"><input class="tournament-team-availability" type="checkbox" checked><span>🟢 Disponível hoje</span></label>`;
     entry.querySelector('.tournament-team-name').value = value.name || '';
     entry.querySelector('.tournament-roster-input').value = value.roster || value.members?.join(', ') || '';
+    entry.querySelector('.tournament-team-availability').checked = value.available !== false;
+    entry.querySelector('.tournament-availability-toggle span').textContent=value.available===false?'🔴 Indisponível hoje':'🟢 Disponível hoje';
+    entry.querySelector('.tournament-team-availability').addEventListener('change', e => { e.currentTarget.nextElementSibling.textContent=e.currentTarget.checked?'🟢 Disponível hoje':'🔴 Indisponível hoje'; });
     entry.querySelector('.team-remove-btn').addEventListener('click', () => {
       if (editor.children.length <= 2) { toast('⚠️ O torneio precisa de pelo menos 2 equipes', 'warn'); return; }
       entry.remove(); updateTournamentTeamNumbers();
@@ -1182,7 +1208,7 @@ const UI = (() => {
       if (members.length !== teamSize) { toast(`⚠️ A Equipe ${i + 1} precisa ter exatamente ${teamSize} ${teamSize === 1 ? 'participante' : 'participantes'}, separados por vírgula`, 'warn'); return; }
       const name = manualNames ? values[i].name.trim() : `Equipe ${members[0]}`;
       if (!name) { toast(`⚠️ Informe o nome da Equipe ${i + 1}`, 'warn'); return; }
-      teams.push({ id:`team-${Date.now()}-${i}`, name, members });
+      teams.push({ id:`team-${Date.now()}-${i}`, name, members, available:values[i].available });
     }
     if (teams.length % 2 !== 0) { toast('⚠️ Não é possível gerar os confrontos com uma quantidade ímpar de equipes. Adicione mais 1 equipe.', 'warn'); return; }
     const normalizedTeamNames = teams.map(team => team.name.toLocaleLowerCase('pt-BR'));
@@ -1210,6 +1236,31 @@ const UI = (() => {
     catch (e) { toast(`❌ Não foi possível publicar o torneio: ${e.message}`, 'err'); return; }
     renderTorneioTab();
     toast('🏆 Chaveamento criado!');
+  };
+
+  const saveBracketChange = async (bracket, message) => {
+    if (!bracket) { toast('⚠️ Esta rodada não pode mais ser alterada', 'warn'); return false; }
+    try { await DB.saveTournament(bracket); bracketSwapSource=null; renderTorneioTab(); toast(message); return true; }
+    catch(e) { toast(`❌ Não foi possível salvar: ${e.message}`, 'err'); return false; }
+  };
+  const toggleTournamentAvailability = async teamId => {
+    if(!Storage.isAdmin())return;const team=Tournament.getBracket()?.teams?.find(t=>t.id===teamId);if(!team)return;
+    await saveBracketChange(Tournament.setAvailability(teamId,team.available===false),`Status de ${team.name} atualizado`);
+  };
+  const selectBracketTeam = async (roundIdx,matchIdx,side) => {
+    if(!Storage.isAdmin())return;const position={roundIdx,matchIdx,side};
+    if(!bracketSwapSource){bracketSwapSource=position;renderTorneioTab();return;}
+    if(bracketSwapSource.roundIdx===roundIdx&&bracketSwapSource.matchIdx===matchIdx&&bracketSwapSource.side===side){bracketSwapSource=null;renderTorneioTab();return;}
+    await saveBracketChange(Tournament.swapTeams(bracketSwapSource,position),'🔄 Equipes trocadas; demais confrontos preservados');
+  };
+  const cancelBracketSwap = () => { bracketSwapSource=null;renderTorneioTab(); };
+  const randomizeTournamentRound = ri => saveBracketChange(Tournament.randomizeRound(ri),'🎲 Confrontos livres sorteados');
+  const smartArrangeTournament = ri => saveBracketChange(Tournament.arrangeSmart(ri),'✨ Organização inteligente aplicada');
+  const toggleManualBracketEditor = () => $('manual-bracket-editor')?.classList.toggle('hidden');
+  const saveManualBracket = ri => {
+    const ids=[...document.querySelectorAll('.manual-bracket-select')].map(select=>select.value);
+    if(new Set(ids).size!==ids.length){toast('⚠️ Cada equipe deve ocupar exatamente uma posição','warn');return;}
+    saveBracketChange(Tournament.setRoundOrder(ri,ids),'✍️ Montagem manual salva ao vivo');
   };
 
   let tournamentResultTarget = null;
@@ -1547,6 +1598,7 @@ const UI = (() => {
     removePlayer, updateSummary,
     // torneio
     startTournamentManual, startTournamentFromSorteio, pickWinner, openTournamentResult, chooseDirectAdvance, resetTournament,
+    toggleTournamentAvailability, selectBracketTeam, cancelBracketSwap, randomizeTournamentRound, smartArrangeTournament, toggleManualBracketEditor, saveManualBracket,
     addTournamentTeam,
     // jogadores
     openProfile, deletePlayer, openRegisterModal, openInviteModal,
