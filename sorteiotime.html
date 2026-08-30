@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sorteio de Times</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #050c08;
+  --s1: #0b1610;
+  --s2: #0f1d14;
+  --border: rgba(37,211,102,0.12);
+  --border2: rgba(255,255,255,0.06);
+  --green: #25D366;
+  --glow: rgba(37,211,102,0.5);
+  --accent: #6effa0;
+  --text: #dff5e8;
+  --muted: #4d7a58;
+  --muted2: #2e4d35;
+  --red: #ff4d6d;
+  --white: #f0faf3;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.bg-orbs {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+}
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.18;
+  animation: orb-drift 12s ease-in-out infinite alternate;
+}
+.orb-1 { width: 600px; height: 600px; background: #25D366; top: -200px; left: -100px; animation-duration: 14s; }
+.orb-2 { width: 400px; height: 400px; background: #00c9a7; bottom: -100px; right: -80px; animation-duration: 10s; animation-delay: -4s; }
+.orb-3 { width: 300px; height: 300px; background: #6effa0; top: 50%; left: 50%; animation-duration: 18s; animation-delay: -8s; opacity: 0.08; }
+
+@keyframes orb-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(40px, -30px) scale(1.08); }
+}
+
+body::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(rgba(37,211,102,0.15) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+}
+
+.wrap {
+  position: relative; z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 60px 20px 100px;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 56px;
+  animation: fade-up 0.8s cubic-bezier(.16,1,.3,1) both;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(37,211,102,0.1);
+  border: 1px solid rgba(37,211,102,0.25);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 24px;
+}
+
+.badge-dot {
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--glow);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; box-shadow: 0 0 8px var(--glow); }
+  50% { opacity: 0.5; box-shadow: 0 0 3px var(--glow); }
+}
+
+.hero-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(52px, 12vw, 96px);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -2px;
+  background: linear-gradient(160deg, #fff 0%, var(--accent) 50%, var(--green) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+}
+
+.hero-sub {
+  font-size: 15px;
+  color: var(--muted);
+  font-weight: 400;
+  max-width: 340px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 40px;
+  animation: fade-up 0.8s cubic-bezier(.16,1,.3,1) 0.1s both;
+}
+
+.stp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+}
+
+.stp-circle {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border2);
+  background: var(--s1);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: all 0.4s cubic-bezier(.16,1,.3,1);
+}
+
+.stp.active .stp-circle {
+  background: var(--green);
+  border-color: var(--green);
+  color: #000;
+  box-shadow: 0 0 0 6px rgba(37,211,102,0.15), 0 0 20px rgba(37,211,102,0.4);
+}
+
+.stp.done .stp-circle {
+  background: rgba(37,211,102,0.15);
+  border-color: rgba(37,211,102,0.4);
+  color: var(--green);
+}
+
+.stp-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted2);
+  transition: color 0.3s;
+}
+
+.stp.active .stp-label { color: var(--green); }
+.stp.done .stp-label { color: var(--muted); }
+
+.stp-line {
+  height: 1.5px;
+  width: 60px;
+  background: var(--border2);
+  margin-bottom: 22px;
+  transition: background 0.4s;
+}
+
+.stp-line.filled { background: rgba(37,211,102,0.35); }
+
+.panel { animation: fade-up 0.5s cubic-bezier(.16,1,.3,1) both; }
+
+.card {
+  background: var(--s1);
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  padding: 28px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(37,211,102,0.2), transparent 50%, rgba(37,211,102,0.05));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-icon {
+  width: 34px; height: 34px;
+  background: rgba(37,211,102,0.12);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+}
+
+textarea.field {
+  width: 100%;
+  min-height: 150px;
+  background: rgba(0,0,0,0.4);
+  border: 1.5px solid var(--border2);
+  border-radius: 16px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13.5px;
+  line-height: 1.9;
+  padding: 14px 18px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+textarea.field:focus {
+  border-color: rgba(37,211,102,0.5);
+  box-shadow: 0 0 0 3px rgba(37,211,102,0.08);
+}
+
+textarea.field::placeholder { color: var(--muted2); }
+
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+input.field-sm, select.field-sm {
+  flex: 1;
+  min-width: 130px;
+  background: rgba(0,0,0,0.4);
+  border: 1.5px solid var(--border2);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  -moz-appearance: textfield;
+}
+
+input.field-sm::-webkit-outer-spin-button,
+input.field-sm::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+input.field-sm:focus, select.field-sm:focus {
+  border-color: rgba(37,211,102,0.5);
+  box-shadow: 0 0 0 3px rgba(37,211,102,0.08);
+}
+
+select.field-sm { cursor: pointer; }
+
+.field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 7px;
+  display: block;
+}
+
+.add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+input.add-field {
+  flex: 1;
+  background: rgba(0,0,0,0.4);
+  border: 1.5px solid var(--border2);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+input.add-field:focus {
+  border-color: rgba(37,211,102,0.5);
+  box-shadow: 0 0 0 3px rgba(37,211,102,0.08);
+}
+
+input.add-field::placeholder { color: var(--muted2); }
+
+.player-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.ptag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(37,211,102,0.07);
+  border: 1px solid rgba(37,211,102,0.18);
+  border-radius: 999px;
+  padding: 5px 8px 5px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  animation: pop 0.2s cubic-bezier(.16,1,.3,1);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.ptag:hover {
+  border-color: rgba(255,77,109,0.5);
+  background: rgba(255,77,109,0.07);
+}
+
+.ptag button {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.ptag:hover button { background: rgba(255,77,109,0.3); color: var(--red); }
+
+.pool-meta {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pool-meta b { color: var(--accent); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 11px 20px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--green);
+  color: #000;
+  box-shadow: 0 4px 24px rgba(37,211,102,0.35), 0 1px 0 rgba(255,255,255,0.2) inset;
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+  box-shadow: 0 6px 32px rgba(78,255,143,0.5);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+
+.btn-ghost:hover { border-color: rgba(37,211,102,0.3); color: var(--text); }
+
+.btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 9px; }
+
+.btn-full { width: 100%; }
+
+.btn-wa {
+  background: #25D366;
+  color: #000;
+  box-shadow: 0 4px 24px rgba(37,211,102,0.35);
+}
+
+.btn-wa:hover { background: #2ee86d; box-shadow: 0 6px 32px rgba(37,211,102,0.5); transform: translateY(-1px); }
+
+.btn-copy {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border2);
+  color: var(--text);
+}
+
+.btn-copy:hover { border-color: rgba(37,211,102,0.3); }
+
+.btn-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border2);
+  margin: 22px 0;
+}
+
+.hint {
+  background: rgba(37,211,102,0.06);
+  border: 1px solid rgba(37,211,102,0.15);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: rgba(110,255,160,0.7);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.summary-box {
+  background: rgba(37,211,102,0.05);
+  border: 1px solid rgba(37,211,102,0.12);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-top: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.results-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.team-block {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border2);
+  border-radius: 18px;
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  animation: fade-up 0.4s cubic-bezier(.16,1,.3,1) both;
+}
+
+.team-block::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.team-block-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+
+.team-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.team-member {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.team-count-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(255,255,255,0.05);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--muted);
+}
+
+.tc0::after { background: linear-gradient(90deg,#25D366,#00c9a7); }
+.tc0 .team-block-label { color: #25D366; }
+.tc0 .team-dot { background: #25D366; box-shadow: 0 0 8px #25D366; }
+
+.tc1::after { background: linear-gradient(90deg,#60a5fa,#818cf8); }
+.tc1 .team-block-label { color: #60a5fa; }
+.tc1 .team-dot { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; }
+
+.tc2::after { background: linear-gradient(90deg,#f472b6,#a78bfa); }
+.tc2 .team-block-label { color: #f472b6; }
+.tc2 .team-dot { background: #f472b6; box-shadow: 0 0 8px #f472b6; }
+
+.tc3::after { background: linear-gradient(90deg,#fbbf24,#f97316); }
+.tc3 .team-block-label { color: #fbbf24; }
+.tc3 .team-dot { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+
+.tc4::after { background: linear-gradient(90deg,#f87171,#fb923c); }
+.tc4 .team-block-label { color: #f87171; }
+.tc4 .team-dot { background: #f87171; box-shadow: 0 0 8px #f87171; }
+
+.tc5::after { background: linear-gradient(90deg,#34d399,#059669); }
+.tc5 .team-block-label { color: #34d399; }
+.tc5 .team-dot { background: #34d399; box-shadow: 0 0 8px #34d399; }
+
+.tc6::after { background: linear-gradient(90deg,#e879f9,#a855f7); }
+.tc6 .team-block-label { color: #e879f9; }
+.tc6 .team-dot { background: #e879f9; box-shadow: 0 0 8px #e879f9; }
+
+.tc7::after { background: linear-gradient(90deg,#38bdf8,#0ea5e9); }
+.tc7 .team-block-label { color: #38bdf8; }
+.tc7 .team-dot { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+
+.preview-box {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 18px 20px;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  line-height: 1.9;
+  color: var(--text);
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 14px;
+}
+
+.preview-box::-webkit-scrollbar { width: 6px; }
+.preview-box::-webkit-scrollbar-track { background: transparent; }
+.preview-box::-webkit-scrollbar-thumb { background: rgba(37,211,102,0.2); border-radius: 3px; }
+
+.toast {
+  position: fixed;
+  bottom: 28px; right: 20px;
+  background: var(--s1);
+  border: 1px solid rgba(37,211,102,0.3);
+  border-radius: 14px;
+  padding: 12px 20px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 999;
+  transform: translateY(70px);
+  opacity: 0;
+  transition: all 0.35s cubic-bezier(.16,1,.3,1);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+
+.draw-overlay {
+  position: fixed; inset: 0;
+  background: rgba(5,12,8,0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  backdrop-filter: blur(8px);
+}
+
+.draw-overlay.active { opacity: 1; pointer-events: all; }
+
+.draw-spinner {
+  width: 80px; height: 80px;
+  border: 3px solid rgba(37,211,102,0.15);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 24px;
+  box-shadow: 0 0 30px rgba(37,211,102,0.3);
+}
+
+.draw-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  animation: flicker 0.4s ease infinite alternate;
+}
+
+@keyframes flicker { from { opacity:1; } to { opacity:0.6; } }
+
+.hidden { display: none !important; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.shake { animation: shake 0.3s ease; }
+
+@media(max-width: 480px) {
+  .stp-label { display: none; }
+  .stp-line { width: 32px; }
+  .hero-title { letter-spacing: -3px; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="draw-overlay" id="drawOverlay">
+  <div class="draw-spinner"></div>
+  <div class="draw-text">Sorteando times...</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="badge">
+      <div class="badge-dot"></div>
+      Sorteio Automático
+    </div>
+    <h1 class="hero-title">SORTEIO<br>DE TIMES</h1>
+    <p class="hero-sub">Cole os nomes do grupo, configure e envie direto pro WhatsApp.</p>
+  </div>
+
+  <div class="stepper">
+    <div class="stp active" id="stp1">
+      <div class="stp-circle">1</div>
+      <div class="stp-label">Jogadores</div>
+    </div>
+    <div class="stp-line" id="line1"></div>
+    <div class="stp" id="stp2">
+      <div class="stp-circle">2</div>
+      <div class="stp-label">Configurar</div>
+    </div>
+    <div class="stp-line" id="line2"></div>
+    <div class="stp" id="stp3">
+      <div class="stp-circle">3</div>
+      <div class="stp-label">Resultado</div>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div id="p1" class="panel">
+    <div class="hint">
+      💡 <span>Copie as mensagens de confirmação do seu grupo e cole aqui — um nome por linha. Ou adicione manualmente.</span>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="card-icon">👥</div>
+          Jogadores
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btnClear">Limpar tudo</button>
+      </div>
+
+      <textarea class="field" id="pasteArea"
+        placeholder="Cole aqui os nomes (um por linha)&#10;&#10;João&#10;Pedro&#10;Lucas&#10;Marcos..."></textarea>
+
+      <div class="btn-bar">
+        <button class="btn btn-ghost" id="btnParse">📋 Processar nomes</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <label class="field-label">Adicionar manualmente</label>
+      <div class="add-row">
+        <input type="text" class="add-field" id="addInput" placeholder="Digite um nome e pressione Enter...">
+        <button class="btn btn-ghost" id="btnAdd">+</button>
+      </div>
+
+      <div class="player-pool" id="playerPool"></div>
+      <div class="pool-meta" id="poolMeta">Nenhum jogador adicionado.</div>
+    </div>
+
+    <div class="btn-bar">
+      <button class="btn btn-primary btn-full" id="btnToConfig" style="height:52px;font-size:15px;">
+        Configurar times →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="p2" class="panel hidden">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="card-icon">⚙️</div>
+          Configurações
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btnBack1">← Voltar</button>
+      </div>
+
+      <div class="row">
+        <div style="flex:1;min-width:130px;">
+          <label class="field-label">Número de times</label>
+          <input type="number" class="field-sm" id="numTeams" value="2" min="2" max="20">
+        </div>
+        <div style="flex:2;min-width:180px;">
+          <label class="field-label">Distribuição</label>
+          <select class="field-sm" id="modeSelect">
+            <option value="balanced">⚖️ Equilibrado</option>
+            <option value="snake">🐍 Snake Draft</option>
+            <option value="sequential">🔢 Sequencial</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div style="flex:1;">
+          <label class="field-label">Nome do evento (opcional)</label>
+          <input type="text" class="field-sm" id="eventName" placeholder="Ex: Pelada da Sexta" style="font-weight:400;font-size:13.5px;">
+        </div>
+      </div>
+
+      <div class="summary-box" id="configSummary">—</div>
+    </div>
+
+    <div class="btn-bar">
+      <button class="btn btn-primary btn-full" id="btnDraw" style="height:56px;font-size:16px;">
+        🎲 &nbsp;Sortear times!
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="p3" class="panel hidden">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="card-icon">🏆</div>
+          Resultado do sorteio
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" id="btnResort">🔀 Novo sorteio</button>
+          <button class="btn btn-ghost btn-sm" id="btnBack2">← Voltar</button>
+        </div>
+      </div>
+      <div class="results-grid" id="resultsGrid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:4px;font-size:15px;">
+        <div class="card-icon">📤</div>
+        Enviar para o WhatsApp
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.6;">
+        Clique em <b style="color:var(--text)">Abrir WhatsApp</b> — a mensagem já vai preenchida, só escolha o grupo.
+      </p>
+      <div class="preview-box" id="outputPreview"></div>
+      <div class="btn-bar" style="margin-top:16px;">
+        <button class="btn btn-copy" id="btnCopy">📋 Copiar</button>
+        <button class="btn btn-wa" id="btnWA" style="flex:1;">
+          <svg width="17" height="17" viewBox="0 0 32 32" fill="#000"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.824.736 5.474 2.023 7.776L0 32l8.456-2.218A15.94 15.94 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm0 29.333a13.28 13.28 0 01-6.81-1.871l-.487-.29-5.02 1.316 1.34-4.887-.317-.503A13.333 13.333 0 1116 29.333zm7.328-9.98c-.4-.2-2.366-1.167-2.733-1.3-.367-.133-.634-.2-.9.2-.267.4-1.033 1.3-1.267 1.567-.233.267-.467.3-.867.1-.4-.2-1.69-.623-3.22-1.983-1.19-1.06-1.993-2.37-2.227-2.77-.233-.4-.025-.616.175-.815.18-.18.4-.467.6-.7.2-.233.267-.4.4-.667.133-.267.067-.5-.033-.7-.1-.2-.9-2.167-1.233-2.967-.325-.78-.655-.674-.9-.686l-.767-.013c-.267 0-.7.1-1.067.5s-1.4 1.367-1.4 3.333 1.433 3.867 1.633 4.133c.2.267 2.82 4.307 6.833 6.04.955.413 1.7.66 2.28.845.958.306 1.83.263 2.52.16.768-.115 2.366-.967 2.7-1.9.333-.933.333-1.733.233-1.9-.1-.167-.367-.267-.767-.467z"/></svg>
+          Abrir WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let players = [];
+let teams = [];
+
+const $ = id => document.getElementById(id);
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    const s = $('stp' + i);
+    s.className = 'stp';
+    if (i < n) s.classList.add('done');
+    else if (i === n) s.classList.add('active');
+  }
+  $('line1').className = 'stp-line' + (n > 1 ? ' filled' : '');
+  $('line2').className = 'stp-line' + (n > 2 ? ' filled' : '');
+  ['p1','p2','p3'].forEach((id, i) => $(id).classList.toggle('hidden', i + 1 !== n));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderPool() {
+  $('playerPool').innerHTML = players.map((p, i) => `
+    <div class="ptag">
+      <span>${p}</span>
+      <button onclick="rmPlayer(${i})">✕</button>
+    </div>`).join('');
+  $('poolMeta').innerHTML = players.length === 0
+    ? 'Nenhum jogador adicionado.'
+    : `<b>${players.length}</b> jogador${players.length > 1 ? 'es' : ''} na lista`;
+}
+
+window.rmPlayer = function(i) {
+  players.splice(i, 1);
+  renderPool();
+};
+
+function addName(name) {
+  name = name.trim();
+  if (!name) return false;
+  if (players.includes(name)) {
+    toast('⚠️ Nome já está na lista!');
+    $('addInput').classList.add('shake');
+    setTimeout(() => $('addInput').classList.remove('shake'), 350);
+    return false;
+  }
+  players.push(name);
+  renderPool();
+  return true;
+}
+
+$('btnParse').addEventListener('click', () => {
+  const lines = $('pasteArea').value.split('\n')
+    .map(l => l.replace(/^[\d\.\-\*\•\→\☑✓]+\s*/, '').trim())
+    .filter(l => l.length > 1 && l.length < 60);
+  const before = players.length;
+  lines.forEach(n => { if (n && !players.includes(n)) players.push(n); });
+  $('pasteArea').value = '';
+  renderPool();
+  const added = players.length - before;
+  toast(added > 0 ? `✅ ${added} nome(s) adicionado(s)!` : '⚠️ Nenhum nome novo encontrado');
+});
+
+$('btnClear').addEventListener('click', () => {
+  players = [];
+  $('pasteArea').value = '';
+  renderPool();
+});
+
+$('btnAdd').addEventListener('click', () => {
+  if (addName($('addInput').value)) $('addInput').value = '';
+});
+
+$('addInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && addName($('addInput').value)) $('addInput').value = '';
+});
+
+$('btnToConfig').addEventListener('click', () => {
+  if (players.length < 2) { toast('⚠️ Adicione pelo menos 2 jogadores!'); return; }
+  updateSummary();
+  setStep(2);
+});
+
+$('btnBack1').addEventListener('click', () => setStep(1));
+$('btnBack2').addEventListener('click', () => setStep(2));
+
+function updateSummary() {
+  const n = Math.max(2, parseInt($('numTeams').value) || 2);
+  const per = Math.floor(players.length / n);
+  const rem = players.length % n;
+  const modes = { balanced:'Equilibrado', snake:'Snake Draft', sequential:'Sequencial' };
+  $('configSummary').innerHTML = `
+    <span style="color:var(--muted);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Resumo</span><br><br>
+    <span style="color:var(--accent);font-weight:600;">${players.length}</span> jogadores em
+    <span style="color:var(--accent);font-weight:600;">${n} times</span> de
+    <span style="color:var(--accent);font-weight:600;">${per}${rem?'–'+(per+1):''} jogadores</span>
+    · modo <b style="color:var(--text)">${modes[$('modeSelect').value]}</b>
+  `;
+}
+
+$('numTeams').addEventListener('input', updateSummary);
+$('modeSelect').addEventListener('change', updateSummary);
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function drawTeams() {
+  const n = Math.max(2, Math.min(parseInt($('numTeams').value) || 2, players.length));
+  const mode = $('modeSelect').value;
+  const s = shuffle(players);
+  teams = Array.from({ length: n }, () => []);
+  if (mode === 'balanced' || mode === 'sequential') {
+    s.forEach((p, i) => teams[i % n].push(p));
+  } else {
+    let dir = 1, cur = 0;
+    s.forEach(p => {
+      teams[cur].push(p);
+      const next = cur + dir;
+      if (next >= n) { dir = -1; cur = n - 2; }
+      else if (next < 0) { dir = 1; cur = 1; }
+      else cur = next;
+    });
+  }
+}
+
+function renderResults() {
+  const tcs = ['tc0','tc1','tc2','tc3','tc4','tc5','tc6','tc7'];
+  const emojis = ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱'];
+  const eventName = $('eventName').value.trim();
+
+  $('resultsGrid').innerHTML = teams.map((team, i) => `
+    <div class="team-block ${tcs[i%8]}" style="animation-delay:${i*0.07}s">
+      <div class="team-block-label">
+        <div class="team-dot"></div>
+        ${emojis[i%8]} Time ${i+1}
+        <div class="team-count-badge">${team.length} jogadores</div>
+      </div>
+      <div class="team-members">
+        ${team.map(p => `<div class="team-member">${p}</div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  const date = new Date().toLocaleDateString('pt-BR');
+  const badges = ['🟢','🔵','🟣','🟡','🔴','🟤','⚪','🟠'];
+  let msg = '';
+  if (eventName) msg += `🏆 *${eventName}*\n`;
+  msg += `🔫 *SORTEIO DE TIMES — ${date}*\n${'━'.repeat(26)}\n\n`;
+  teams.forEach((team, i) => {
+    msg += `${badges[i%8]} *SLOT ${i+1}*\n`;
+    team.forEach(p => { msg += `  • ${p}\n`; });
+    msg += '\n';
+  });
+  msg += `${'─'.repeat(26)}\n → ᴘᴇʀsᴏɴᴀɢᴇɴs: ᴀʟᴏᴋ, ᴋᴇʟʟʏ, ᴍᴀxɪᴍ, ᴍᴏᴄᴏ, ʟᴇᴏɴ ᴇ ʟᴀᴜʀᴀ \n
+    → sᴇᴍ ᴄᴀʀʀᴇɢᴀᴍᴇɴᴛᴏ \n
+    → ᴘᴇᴛs ᴘʀᴏɪʙɪᴅᴏs: ᴅʀᴀᴋɪɴᴏ, ᴇᴛᴢɪɴ ᴇ ᴄᴀsᴄᴜᴅɪɴʜᴏ \n
+    → 3 ᴍɪɴᴜᴛᴏs ᴘᴀʀᴀ ᴇɴᴛʀᴀʀ! ᴀᴘᴏ́s ɪssᴏ, ᴀʙʀᴇ ᴠᴀɢᴀ. \n✅ Sorteado automaticamente`;
+  $('outputPreview').textContent = msg;
+}
+
+$('btnDraw').addEventListener('click', () => {
+  const n = Math.max(2, parseInt($('numTeams').value) || 2);
+  if (n >= players.length) { toast('⚠️ Precisa ter mais jogadores que times!'); return; }
+  const overlay = $('drawOverlay');
+  overlay.classList.add('active');
+  setTimeout(() => {
+    drawTeams();
+    renderResults();
+    overlay.classList.remove('active');
+    setStep(3);
+  }, 900);
+});
+
+$('btnResort').addEventListener('click', () => {
+  const overlay = $('drawOverlay');
+  overlay.classList.add('active');
+  setTimeout(() => {
+    drawTeams();
+    renderResults();
+    overlay.classList.remove('active');
+    toast('🎲 Novo sorteio feito!');
+  }, 700);
+});
+
+$('btnCopy').addEventListener('click', () => {
+  const text = $('outputPreview').textContent;
+  navigator.clipboard.writeText(text)
+    .then(() => toast('✅ Copiado! Cole no WhatsApp.'))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast('✅ Copiado! Cole no WhatsApp.');
+    });
+});
+
+$('btnWA').addEventListener('click', () => {
+  window.open('https://wa.me/?text=' + encodeURIComponent($('outputPreview').textContent), '_blank');
+});
+
+renderPool();
+</script>
+</body>
+</html>

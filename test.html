@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test</title>
+</head>
+<body>
+  <h1>Testing JS Loading</h1>
+  <div id="status">Loading...</div>
+  
+  <script>
+    document.getElementById('status').innerHTML = 'Starting to load scripts...';
+  </script>
+  
+  <script src="js/firebase-config.js"></script>
+  <script>
+    document.getElementById('status').innerHTML += '<br>firebase-config loaded';
+  </script>
+  
+  <script src="js/db.js"></script>
+  <script>
+    document.getElementById('status').innerHTML += '<br>db loaded';
+  </script>
+  
+  <script src="js/storage.js"></script>
+  <script>
+    document.getElementById('status').innerHTML += '<br>storage loaded';
+  </script>
+  
+  <script src="js/players.js"></script>
+  <script>
+    document.getElementById('status').innerHTML += '<br>players loaded';
+  </script>
+  
+  <script src="js/tournament.js"></script>
+  <script>
+    document.getElementById('status').innerHTML += '<br>tournament loaded';
+  </script>
+  
+  <script src="js/sorteio.js"></script>
+  <script>
+    document.getElementById('status').innerHTML += '<br>sorteio loaded';
+  </script>
+  
+  <script src="js/app.js"></script>
+  <script>
+    document.getElementById('status').innerHTML += '<br>app loaded - SUCCESS!';
+  </script>
+</body>
+</html>

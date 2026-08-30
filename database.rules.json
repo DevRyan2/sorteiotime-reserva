@@ -1,0 +1,27 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": false,
+    "sessions": {
+      "$sessionId": {
+        ".write": "auth != null && auth.token.email == 'painel@sorteiotime.app'",
+        "confirmed": {
+          "$confirmationId": {
+            ".write": "auth != null && ((auth.token.email == 'painel@sorteiotime.app') || (!data.exists() && newData.child('ownerUid').val() == auth.uid) || (data.child('ownerUid').val() == auth.uid && newData.child('ownerUid').val() == auth.uid))",
+            ".validate": "!newData.exists() || (newData.hasChildren(['nick', 'addedAt', 'ownerUid']) && newData.child('nick').isString() && newData.child('nick').val().length >= 2 && newData.child('nick').val().length <= 40 && newData.child('ownerUid').isString())"
+          }
+        }
+      }
+    },
+    "players": {
+      ".write": "auth != null && auth.token.email == 'painel@sorteiotime.app'"
+    },
+    "matches": {
+      ".write": "auth != null && auth.token.email == 'painel@sorteiotime.app'"
+    },
+    "tournament": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email == 'painel@sorteiotime.app'"
+    }
+  }
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FF Squad Manager - No Overlays</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" type="image/png" sizes="32x32" href="logo/ffsm_logo.png">
+<style>
+  .modal-backdrop { display: none !important; }
+  .draw-overlay { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- Fundo animado -->
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================ -->
+<div class="wrap">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="badge"><div class="badge-dot"></div>FF Squad Manager</div>
+    <h1 class="hero-title">FREE FIRE<br>SQUAD</h1>
+    <p class="hero-sub">Sorteio, histórico, perfis, conquistas e torneio — tudo em um lugar.</p>
+  </div>
+
+  <!-- Top bar (admin) -->
+  <div class="top-bar">
+    <button class="btn btn-ghost btn-sm" id="btn-scoring-config" onclick="UI.openScoringConfigModal()" style="display:none">⚙️ Pontos</button>
+    <button class="btn btn-ghost btn-sm" id="admin-btn">🔒 Admin</button>
+  </div>
+
+  <!-- Tab nav -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" id="tab-btn-sorteio" data-tab="sorteio">🎲 <span>Sorteio</span></button>
+    <button class="tab-btn" id="tab-btn-partidas"  data-tab="partidas" >📅 <span>Partidas</span></button>
+    <button class="tab-btn" id="tab-btn-jogadores" data-tab="jogadores">👤 <span>Jogadores</span></button>
+    <button class="tab-btn" id="tab-btn-perfil"    data-tab="perfil"   >⭐ <span>Perfil</span></button>
+    <button class="tab-btn" id="tab-btn-torneio"   data-tab="torneio"  >🏆 <span>Torneio</span></button>
+  </nav>
+
+  <p style="color: #25D366; text-align: center; padding: 20px; background: rgba(37,211,102,0.1); border-radius: 10px; margin: 20px 0;">
+    ✅ Todos os modais e overlays foram desabilitados nesta versão de teste.
+  </p>
+  <p style="color: var(--muted); text-align: center;">
+    Clique nas abas acima para testar a navegação.
+  </p>
+
+</div><!-- /wrap -->
+
+<!-- Firebase SDK (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<!-- Scripts — ordem importa -->
+<script src="js/firebase-config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/players.js"></script>
+<script src="js/tournament.js"></script>
+<script src="js/sorteio.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

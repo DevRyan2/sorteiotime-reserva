@@ -1,0 +1,192 @@
+// storage.js — camada de dados (localStorage)
+
+const Storage = (() => {
+  const K = {
+    PLAYERS:  'ff_players',
+    MATCHES:  'ff_matches',
+    SESSIONS: 'ff_sessions',
+    IS_ADMIN: 'ff_is_admin',
+    TOURNAMENT:'ff_tournament',
+    SCORING_CONFIG:'ff_scoring_config',
+  };
+
+  const DEFAULT_SCORING = {
+    pointsPerWin: 10,
+    pointsPerMvp: 15,
+    ranks: [
+      { name: 'Bronze',   minPoints: 0   },
+      { name: 'Prata',    minPoints: 50  },
+      { name: 'Ouro',     minPoints: 100 },
+      { name: 'Platina',  minPoints: 200 },
+      { name: 'Diamante', minPoints: 350 },
+      { name: 'Mestre',   minPoints: 500 },
+    ],
+  };
+
+  const get = key => {
+    try { return JSON.parse(localStorage.getItem(key)); }
+    catch { return null; }
+  };
+  const set = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+
+  // ── Players ──────────────────────────────────────────────────────────────
+  const getPlayers  = ()  => get(K.PLAYERS) || {};
+  const setPlayers  = (p) => set(K.PLAYERS, p);
+
+  const getPlayer = (nick) => getPlayers()[nick] || null;
+
+  const upsertPlayer = (nick, data) => {
+    const all = getPlayers();
+    all[nick] = {
+      nick,
+      rank: 'Bronze',
+      matches: [],
+      achievements: [],
+      joinedAt: Date.now(),
+      ...(all[nick] || {}),
+      ...data,
+    };
+    setPlayers(all);
+    return all[nick];
+  };
+
+  const deletePlayer = (nick) => {
+    const all = getPlayers();
+    delete all[nick];
+    setPlayers(all);
+  };
+
+  // ── Matches ───────────────────────────────────────────────────────────────
+  const getMatches = () => get(K.MATCHES) || [];
+
+  const addMatch = (match) => {
+    const all = getMatches();
+    const m = { id: Date.now(), createdAt: Date.now(), ...match };
+    all.unshift(m);
+    set(K.MATCHES, all);
+    return m;
+  };
+
+  const deleteMatch = (id) => {
+    set(K.MATCHES, getMatches().filter(m => m.id !== id));
+  };
+
+  // ── Sessions (agendamento) ────────────────────────────────────────────────
+  const getSessions  = ()  => get(K.SESSIONS) || [];
+
+  const addSession = (session) => {
+    const all = getSessions();
+    const s = { id: Date.now(), confirmed: [], createdAt: Date.now(), ...session };
+    all.unshift(s);
+    set(K.SESSIONS, all);
+    return s;
+  };
+
+  const updateSession = (id, updates) => {
+    const all = getSessions();
+    const i = all.findIndex(s => s.id === id);
+    if (i >= 0) { all[i] = { ...all[i], ...updates }; set(K.SESSIONS, all); }
+    return all[i] || null;
+  };
+
+  const deleteSession = (id) => set(K.SESSIONS, getSessions().filter(s => s.id !== id));
+
+  // ── Confirmação local (por dispositivo) ───────────────────────────────────
+  // Guarda no navegador do membro: qual nick ele confirmou e se já editou
+  // Formato: { nick: 'João', edited: false }
+  const getMyConfirmation = (sessionId) => get(`ff_myconf_${sessionId}`);
+  const setMyConfirmation = (sessionId, data) => set(`ff_myconf_${sessionId}`, data);
+
+  // Adicionar nick confirmado à sessão (chamado pelo admin ou pelo membro)
+  const addConfirmed = (sessionId, nick) => {
+    const all = getSessions();
+    const i = all.findIndex(s => s.id === sessionId);
+    if (i < 0) return null;
+    const confirmed = all[i].confirmed || [];
+    if (!confirmed.includes(nick)) {
+      all[i].confirmed = [...confirmed, nick];
+      set(K.SESSIONS, all);
+    }
+    return all[i];
+  };
+
+  // Trocar nick confirmado (edição única do membro)
+  const replaceConfirmed = (sessionId, oldNick, newNick) => {
+    const all = getSessions();
+    const i = all.findIndex(s => s.id === sessionId);
+    if (i < 0) return null;
+    all[i].confirmed = (all[i].confirmed || []).map(n => n === oldNick ? newNick : n);
+    set(K.SESSIONS, all);
+    return all[i];
+  };
+
+  // Remover nick da lista (admin)
+  const removeConfirmed = (sessionId, nick) => {
+    const all = getSessions();
+    const i = all.findIndex(s => s.id === sessionId);
+    if (i < 0) return null;
+    all[i].confirmed = (all[i].confirmed || []).filter(n => n !== nick);
+    set(K.SESSIONS, all);
+    return all[i];
+  };
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  const isAdmin  = ()  => sessionStorage.getItem(K.IS_ADMIN) === 'true';
+  const setAdmin = (v) => v ? sessionStorage.setItem(K.IS_ADMIN, 'true') : sessionStorage.removeItem(K.IS_ADMIN);
+
+  // ── Nick persistente do usuário ───────────────────────────────────────
+  // Guardamos o nick que o dispositivo usou para confirmar presença pela
+  // primeira vez; o usuário pode alterá-lo até 2 vezes.
+  const getMyNick        = () => get('ff_my_nick') || '';
+  const setMyNick        = (n) => set('ff_my_nick', n);
+  const getNickEdits     = () => get('ff_my_nick_edits') || 0;
+  const incrementNickEdits = () => set('ff_my_nick_edits', getNickEdits() + 1);
+
+  const checkPassword = async (pw) => {
+    if (typeof pw !== 'string' || !window.firebase?.auth) return false;
+    try {
+      await firebase.auth().signInWithEmailAndPassword(window.FIREBASE_CONFIG.adminEmail, pw.trim());
+      const isExpectedUser = firebase.auth().currentUser?.email === window.FIREBASE_CONFIG.adminEmail;
+      setAdmin(isExpectedUser);
+      return isExpectedUser;
+    } catch { return false; }
+  };
+
+  // ── Scoring Configuration ─────────────────────────────────────────────────
+  const getScoringConfig  = ()    => get(K.SCORING_CONFIG) || DEFAULT_SCORING;
+  const setScoringConfig  = (cfg) => set(K.SCORING_CONFIG, cfg);
+
+  const calculateRank = (points) => {
+    const cfg = getScoringConfig();
+    for (let i = cfg.ranks.length - 1; i >= 0; i--) {
+      if (points >= cfg.ranks[i].minPoints) return cfg.ranks[i].name;
+    }
+    return cfg.ranks[0].name;
+  };
+
+  const addPoints = (nick, pts) => {
+    const p = getPlayer(nick);
+    if (!p) return null;
+    p.points = (p.points || 0) + pts;
+    p.rank   = calculateRank(p.points);
+    upsertPlayer(nick, p);
+    return p;
+  };
+
+  // ── Tournament ────────────────────────────────────────────────────────────
+  const getTournament  = ()  => get(K.TOURNAMENT);
+  const setTournament  = (t) => set(K.TOURNAMENT, t);
+  const clearTournament= ()  => localStorage.removeItem(K.TOURNAMENT);
+
+  return {
+    getPlayers, setPlayers, getPlayer, upsertPlayer, deletePlayer,
+    getMatches, addMatch, deleteMatch,
+    getSessions, addSession, updateSession, deleteSession,
+    addConfirmed, replaceConfirmed, removeConfirmed,
+    getMyConfirmation, setMyConfirmation,
+    isAdmin, setAdmin, checkPassword,
+    getMyNick, setMyNick, getNickEdits, incrementNickEdits,
+    getScoringConfig, setScoringConfig, calculateRank, addPoints,
+    getTournament, setTournament, clearTournament,
+  };
+})();

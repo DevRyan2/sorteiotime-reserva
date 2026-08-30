@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Console Test</title>
+<style>
+  body { background: #1a1a1a; color: #fff; font-family: monospace; padding: 20px; }
+  #console { background: #222; padding: 20px; border-radius: 5px; max-height: 600px; overflow-y: auto; }
+  .log { margin: 5px 0; }
+  .error { color: #ff4d6d; }
+  .info { color: #25D366; }
+</style>
+</head>
+<body>
+  <h1>Console Output</h1>
+  <div id="console"></div>
+
+  <script>
+    const consoleDiv = document.getElementById('console');
+    const originalLog = console.log;
+    const originalError = console.error;
+    
+    const addLog = (msg, type = 'info') => {
+      const p = document.createElement('div');
+      p.className = 'log ' + type;
+      p.textContent = msg;
+      consoleDiv.appendChild(p);
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    };
+    
+    console.log = function(...args) {
+      addLog('[LOG] ' + args.join(' '), 'info');
+      originalLog.apply(console, args);
+    };
+    
+    console.error = function(...args) {
+      addLog('[ERROR] ' + args.join(' '), 'error');
+      originalError.apply(console, args);
+    };
+    
+    window.addEventListener('error', (event) => {
+      addLog('[RUNTIME ERROR] ' + event.message + ' at ' + event.filename + ':' + event.lineno, 'error');
+    });
+    
+    addLog('Page loaded, loading scripts...', 'info');
+  </script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+  <!-- Scripts — ordem importa -->
+  <script>addLog('Loading firebase-config...');</script>
+  <script src="js/firebase-config.js"></script>
+  <script>addLog('firebase-config loaded');</script>
+  
+  <script>addLog('Loading db...');</script>
+  <script src="js/db.js"></script>
+  <script>addLog('db loaded');</script>
+  
+  <script>addLog('Loading storage...');</script>
+  <script src="js/storage.js"></script>
+  <script>addLog('storage loaded');</script>
+  
+  <script>addLog('Loading players...');</script>
+  <script src="js/players.js"></script>
+  <script>addLog('players loaded');</script>
+  
+  <script>addLog('Loading tournament...');</script>
+  <script src="js/tournament.js"></script>
+  <script>addLog('tournament loaded');</script>
+  
+  <script>addLog('Loading sorteio...');</script>
+  <script src="js/sorteio.js"></script>
+  <script>addLog('sorteio loaded');</script>
+  
+  <script>addLog('Loading app...');</script>
+  <script src="js/app.js"></script>
+  <script>addLog('app loaded - ALL SCRIPTS LOADED', 'info');</script>
+</body>
+</html>

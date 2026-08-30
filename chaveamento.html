@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Torneio MD3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #ff3366;
+            --secondary: #00d4ff;
+            --dark: #0a0e27;
+            --darker: #050817;
+            --light: #ffffff;
+            --gray: #6b7280;
+            --accent: #ffcc00;
+        }
+
+        body {
+            font-family: 'Archivo', sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, #1a1f3a 100%);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 51, 102, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(0, 212, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 4rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 3px;
+            text-shadow: 0 0 40px rgba(255, 51, 102, 0.3);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--gray);
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .setup-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            color: var(--secondary);
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--light);
+            font-family: 'Archivo', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.3);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary), #ff0055);
+            color: var(--light);
+            border: none;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 51, 102, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .group-card {
+            background: linear-gradient(135deg, rgba(255, 51, 102, 0.1), rgba(0, 212, 255, 0.1));
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            animation: fadeInScale 0.5s ease-out backwards;
+        }
+
+        .group-card:nth-child(1) { animation-delay: 0.1s; }
+        .group-card:nth-child(2) { animation-delay: 0.2s; }
+        .group-card:nth-child(3) { animation-delay: 0.3s; }
+        .group-card:nth-child(4) { animation-delay: 0.4s; }
+        .group-card:nth-child(5) { animation-delay: 0.5s; }
+        .group-card:nth-child(6) { animation-delay: 0.6s; }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .group-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.8rem;
+            color: var(--secondary);
+            margin-bottom: 1rem;
+            letter-spacing: 2px;
+        }
+
+        .player {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+            font-weight: 600;
+        }
+
+        .bracket-container {
+            margin-top: 3rem;
+            padding: 2rem;
+            overflow-x: auto;
+        }
+
+        .bracket-wrapper {
+            display: flex;
+            gap: 3rem;
+            justify-content: center;
+            align-items: center;
+            min-width: max-content;
+            position: relative;
+        }
+
+        .bracket-round {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            position: relative;
+        }
+
+        .round-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            text-align: center;
+            letter-spacing: 3px;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            position: absolute;
+            left: -50px;
+            top: 50%;
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .matches-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            gap: 3rem;
+            min-height: 400px;
+        }
+
+        .bracket-match {
+            position: relative;
+            z-index: 2;
+        }
+
+        .match-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1rem;
+            position: relative;
+            width: 280px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .match-card:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(255, 51, 102, 0.5);
+            border-color: var(--primary);
+            z-index: 10;
+        }
+
+        .match-card.completed {
+            border-color: var(--secondary);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+        }
+
+        .match-card.waiting {
+            opacity: 0.5;
+        }
+
+        .match-card.highlight-path {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(255, 204, 0, 0.6);
+        }
+
+        .match-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 0.9rem;
+            color: var(--gray);
+            text-align: center;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        /* Linhas conectoras do bracket */
+        .connector {
+            position: absolute;
+            background: rgba(255, 51, 102, 0.3);
+            z-index: 1;
+        }
+
+        .connector.horizontal {
+            height: 2px;
+        }
+
+        .connector.vertical {
+            width: 2px;
+        }
+
+        .connector-line {
+            position: absolute;
+            border: 2px solid rgba(255, 51, 102, 0.5);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Animação de pulso nas linhas */
+        @keyframes linePulse {
+            0%, 100% {
+                opacity: 0.8;
+                filter: drop-shadow(0 0 8px rgba(255, 51, 102, 0.6));
+            }
+            50% {
+                opacity: 1;
+                filter: drop-shadow(0 0 15px rgba(255, 51, 102, 0.9));
+            }
+        }
+
+        .bracket-connector-svg path {
+            animation: linePulse 2s ease-in-out infinite;
+        }
+
+        .match-players {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .match-player {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .match-player.winner {
+            border-color: var(--accent);
+            background: rgba(255, 204, 0, 0.1);
+        }
+
+        .player-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .match-score {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .score-input {
+            width: 60px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 0.5rem;
+        }
+
+        .score-display {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'Bebas Neue', sans-serif;
+            margin: 1rem 0;
+        }
+
+        .score-num {
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .confirm-btn {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .champion-banner {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            margin-top: 3rem;
+            animation: championReveal 1s ease-out;
+            box-shadow: 0 20px 60px rgba(255, 51, 102, 0.5);
+        }
+
+        @keyframes championReveal {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) rotateX(-20deg);
+            }
+            50% {
+                transform: scale(1.1) rotateX(5deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateX(0);
+            }
+        }
+
+        .champion-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            letter-spacing: 5px;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .champion-name {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 4rem;
+            letter-spacing: 5px;
+            text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.7);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .stats-panel {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 51, 102, 0.5);
+            border-radius: 20px;
+            padding: 1.5rem;
+            max-width: 300px;
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 0 30px rgba(255, 51, 102, 0.3);
+        }
+
+        .stats-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.8rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            text-align: center;
+            letter-spacing: 3px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 3px solid var(--primary);
+            transition: all 0.3s;
+        }
+
+        .stat-item:hover {
+            background: rgba(255, 51, 102, 0.1);
+            transform: translateX(-5px);
+        }
+
+        .stat-item.top1 {
+            border-left-color: #ffd700;
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .stat-item.top2 {
+            border-left-color: #c0c0c0;
+            background: rgba(192, 192, 192, 0.1);
+        }
+
+        .stat-item.top3 {
+            border-left-color: #cd7f32;
+            background: rgba(205, 127, 50, 0.1);
+        }
+
+        .stat-rank {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
+            color: var(--accent);
+            min-width: 40px;
+        }
+
+        .stat-player {
+            flex: 1;
+            font-weight: 600;
+            padding: 0 0.5rem;
+        }
+
+        .stat-kills {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.3rem;
+            color: var(--primary);
+            background: rgba(255, 51, 102, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+        }
+
+        .mvp-podium {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 1rem;
+            margin: 2rem 0;
+            padding: 2rem;
+        }
+
+        .podium-place {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: podiumRise 1s ease-out backwards;
+        }
+
+        .podium-place.first {
+            order: 2;
+            animation-delay: 0.3s;
+        }
+
+        .podium-place.second {
+            order: 1;
+            animation-delay: 0.2s;
+        }
+
+        .podium-place.third {
+            order: 3;
+            animation-delay: 0.1s;
+        }
+
+        @keyframes podiumRise {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .podium-medal {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 0 20px currentColor);
+        }
+
+        .podium-place.first .podium-medal {
+            color: #ffd700;
+        }
+
+        .podium-place.second .podium-medal {
+            color: #c0c0c0;
+        }
+
+        .podium-place.third .podium-medal {
+            color: #cd7f32;
+        }
+
+        .podium-player {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .podium-kills {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .podium-base {
+            width: 120px;
+            background: linear-gradient(180deg, rgba(255, 51, 102, 0.3), rgba(255, 51, 102, 0.1));
+            border: 2px solid rgba(255, 51, 102, 0.5);
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            color: var(--light);
+        }
+
+        .podium-place.first .podium-base {
+            height: 150px;
+            background: linear-gradient(180deg, rgba(255, 215, 0, 0.3), rgba(255, 215, 0, 0.1));
+            border-color: #ffd700;
+        }
+
+        .podium-place.second .podium-base {
+            height: 120px;
+            background: linear-gradient(180deg, rgba(192, 192, 192, 0.3), rgba(192, 192, 192, 0.1));
+            border-color: #c0c0c0;
+        }
+
+        .podium-place.third .podium-base {
+            height: 90px;
+            background: linear-gradient(180deg, rgba(205, 127, 50, 0.3), rgba(205, 127, 50, 0.1));
+            border-color: #cd7f32;
+        }
+
+        .kills-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .kills-label {
+            font-size: 0.8rem;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .kills-input {
+            width: 60px;
+            padding: 0.4rem;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 51, 102, 0.3);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 1rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .kills-input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .toggle-stats-btn {
+            position: fixed;
+            right: 2rem;
+            top: 2rem;
+            background: linear-gradient(135deg, var(--primary), #ff0055);
+            color: var(--light);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            z-index: 101;
+            box-shadow: 0 5px 20px rgba(255, 51, 102, 0.4);
+            transition: all 0.3s;
+        }
+
+        .toggle-stats-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 51, 102, 0.6);
+        }
+
+        @media (max-width: 1024px) {
+            .stats-panel {
+                position: relative;
+                right: auto;
+                top: auto;
+                transform: none;
+                margin: 2rem auto;
+                max-width: 100%;
+            }
+
+            .toggle-stats-btn {
+                position: relative;
+                right: auto;
+                top: auto;
+                display: block;
+                margin: 1rem auto;
+            }
+        }
+
+        .error {
+            background: rgba(255, 51, 102, 0.2);
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+            color: var(--light);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .bracket-wrapper {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .bracket-round {
+                width: 100%;
+            }
+
+            .round-title {
+                position: relative;
+                writing-mode: horizontal-tb;
+                transform: none;
+                left: 0;
+                top: 0;
+                text-align: left;
+                margin-bottom: 1rem;
+            }
+
+            .matches-column {
+                width: 100%;
+            }
+
+            .match-card {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            .groups-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* Ocultar linhas conectoras no mobile */
+            .bracket-connector-svg {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚔️ TORNEIO MD3 ⚔️</h1>
+        <p class="subtitle">Gerador de Chaveamento Melhor de 3</p>
+
+        <div id="setupSection" class="setup-section">
+            <div class="input-group">
+                <label for="numGroups">Número de Grupos (2 jogadores por grupo):</label>
+                <input type="number" id="numGroups" min="2" value="4" placeholder="Ex: 4">
+            </div>
+
+            <div class="input-group">
+                <label for="playerNames">Nomes dos Participantes (um por linha):</label>
+                <textarea id="playerNames" placeholder="Digite um nome por linha...
+Ex:
+João
+Maria
+Pedro
+Ana
+Carlos
+Fernanda
+Lucas
+Beatriz"></textarea>
+            </div>
+
+            <div class="btn-group">
+                <button onclick="generateGroups()">🎲 Gerar Grupos Aleatórios</button>
+            </div>
+
+            <div id="error" class="error hidden"></div>
+        </div>
+
+        <div id="groupsSection" class="hidden">
+            <h2 class="round-title">📋 Grupos Formados</h2>
+            <div id="groupsDisplay" class="groups-grid"></div>
+            
+            <div class="btn-group">
+                <button onclick="startTournament()">▶️ Iniciar Torneio</button>
+                <button onclick="resetTournament()">🔄 Refazer Grupos</button>
+            </div>
+        </div>
+
+        <div id="bracketSection" class="hidden bracket-container"></div>
+
+        <div id="championSection" class="hidden"></div>
+    </div>
+
+    <script>
+        let groups = [];
+        let bracket = [];
+        let currentRound = 0;
+        let playerStats = {}; // Estatísticas de cada jogador
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+        }
+
+        function generateGroups() {
+            const numGroups = parseInt(document.getElementById('numGroups').value);
+            const playerNamesText = document.getElementById('playerNames').value.trim();
+
+            if (!numGroups || numGroups < 2) {
+                showError('⚠️ Você precisa ter pelo menos 2 grupos!');
+                return;
+            }
+
+            const playerNames = playerNamesText.split('\n')
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
+
+            const requiredPlayers = numGroups * 2;
+
+            if (playerNames.length !== requiredPlayers) {
+                showError(`⚠️ Você precisa de exatamente ${requiredPlayers} jogadores para ${numGroups} grupos (${playerNames.length} fornecidos)`);
+                return;
+            }
+
+            // SUPER EMBARALHAMENTO - múltiplas passagens do Fisher-Yates
+            const shuffled = [...playerNames];
+            
+            // Primeira passada - embaralhamento normal
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            
+            // Segunda passada - embaralhamento reverso para garantir aleatoriedade extra
+            for (let i = 0; i < shuffled.length - 1; i++) {
+                const j = i + Math.floor(Math.random() * (shuffled.length - i));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            
+            // Terceira passada - embaralhamento em blocos aleatórios
+            const blockSize = Math.floor(shuffled.length / 3);
+            for (let block = 0; block < 3; block++) {
+                const start = block * blockSize;
+                const end = block === 2 ? shuffled.length : start + blockSize;
+                for (let i = end - 1; i > start; i--) {
+                    const j = start + Math.floor(Math.random() * (i - start + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+            }
+
+            // Criar grupos
+            groups = [];
+            for (let i = 0; i < numGroups; i++) {
+                groups.push({
+                    name: `Grupo ${String.fromCharCode(65 + i)}`,
+                    players: [shuffled[i * 2], shuffled[i * 2 + 1]]
+                });
+            }
+
+            displayGroups();
+            document.getElementById('groupsSection').classList.remove('hidden');
+        }
+
+        function displayGroups() {
+            const display = document.getElementById('groupsDisplay');
+            display.innerHTML = groups.map(group => `
+                <div class="group-card">
+                    <div class="group-title">${group.name}</div>
+                    <div class="player">${group.players[0]}</div>
+                    <div class="player">${group.players[1]}</div>
+                </div>
+            `).join('');
+        }
+
+        function startTournament() {
+            const numTeams = groups.length;
+            
+            // Inicializar estatísticas dos jogadores
+            playerStats = {};
+            groups.forEach(group => {
+                group.players.forEach(player => {
+                    playerStats[player] = {
+                        name: player,
+                        totalKills: 0,
+                        matchesPlayed: 0,
+                        matchesWon: 0
+                    };
+                });
+            });
+            
+            // EMBARALHAR ORDEM DOS GRUPOS para confrontos aleatórios
+            const shuffledGroups = [...groups];
+            for (let i = shuffledGroups.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledGroups[i], shuffledGroups[j]] = [shuffledGroups[j], shuffledGroups[i]];
+            }
+            
+            // Criar bracket completo com todas as rodadas
+            bracket = [];
+            
+            // Primeira rodada com todos os times (ordem embaralhada)
+            const firstRound = {
+                round: 1,
+                matches: shuffledGroups.map((group, index) => ({
+                    id: `r1m${index}`,
+                    player1: group.players[0],
+                    player2: group.players[1],
+                    score1: 0,
+                    score2: 0,
+                    kills1: 0,
+                    kills2: 0,
+                    winner: null,
+                    completed: false
+                }))
+            };
+            bracket.push(firstRound);
+
+            // Calcular número de rodadas necessárias
+            let remainingTeams = numTeams;
+            let roundNum = 2;
+            
+            while (remainingTeams > 1) {
+                remainingTeams = Math.floor(remainingTeams / 2);
+                const roundMatches = [];
+                
+                for (let i = 0; i < remainingTeams; i++) {
+                    roundMatches.push({
+                        id: `r${roundNum}m${i}`,
+                        player1: null,
+                        player2: null,
+                        score1: 0,
+                        score2: 0,
+                        kills1: 0,
+                        kills2: 0,
+                        winner: null,
+                        completed: false
+                    });
+                }
+                
+                bracket.push({
+                    round: roundNum,
+                    matches: roundMatches
+                });
+                
+                roundNum++;
+            }
+
+            currentRound = 0;
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('groupsSection').classList.add('hidden');
+            
+            // Criar painel de estatísticas
+            createStatsPanel();
+            
+            displayBracket();
+            updateStatsPanel();
+        }
+
+        function createStatsPanel() {
+            // Verificar se já existe
+            let panel = document.getElementById('statsPanel');
+            if (panel) {
+                panel.classList.remove('hidden');
+                return;
+            }
+
+            // Criar novo painel
+            panel = document.createElement('div');
+            panel.id = 'statsPanel';
+            panel.className = 'stats-panel';
+            document.body.appendChild(panel);
+
+            // Criar botão toggle para mobile
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'toggle-stats-btn';
+            toggleBtn.textContent = '📊 Ver Ranking';
+            toggleBtn.onclick = function() {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            };
+            document.body.appendChild(toggleBtn);
+        }
+
+        function displayBracket() {
+            const container = document.getElementById('bracketSection');
+            container.classList.remove('hidden');
+            
+            // Criar estrutura do bracket com SVG para linhas
+            let html = '<div class="bracket-wrapper">';
+            
+            // Para cada rodada, criar coluna
+            bracket.forEach((round, roundIndex) => {
+                const roundName = getRoundName(roundIndex);
+                
+                html += `
+                    <div class="bracket-round">
+                        <div class="round-title">${roundName}</div>
+                        <div class="matches-column">
+                            ${round.matches.map((match, matchIndex) => `
+                                <div class="bracket-match" data-round="${roundIndex}" data-match="${matchIndex}">
+                                    ${createMatchCard(match, roundIndex)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Adicionar linhas conectoras com SVG
+            setTimeout(drawConnectors, 100);
+        }
+
+        function getRoundName(roundIndex) {
+            const totalRounds = bracket.length;
+            if (roundIndex === totalRounds - 1 && bracket[roundIndex].matches.length === 1) {
+                return '🏆 FINAL';
+            } else if (roundIndex === totalRounds - 2 && totalRounds > 1) {
+                return '⚡ SEMI';
+            } else if (roundIndex === totalRounds - 3 && totalRounds > 2) {
+                return '🔥 QUARTAS';
+            }
+            return `R${roundIndex + 1}`;
+        }
+
+        function drawConnectors() {
+            // Limpar conectores antigos
+            document.querySelectorAll('.bracket-connector-svg').forEach(el => el.remove());
+
+            const wrapper = document.querySelector('.bracket-wrapper');
+            if (!wrapper) return;
+
+            // Criar SVG para cobrir toda a área
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.classList.add('bracket-connector-svg');
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.pointerEvents = 'none';
+            svg.style.zIndex = '1';
+            wrapper.style.position = 'relative';
+            wrapper.appendChild(svg);
+
+            // Para cada rodada (exceto a última)
+            bracket.forEach((round, roundIndex) => {
+                if (roundIndex === bracket.length - 1) return;
+
+                const currentRoundMatches = document.querySelectorAll(`[data-round="${roundIndex}"]`);
+                const nextRoundMatches = document.querySelectorAll(`[data-round="${roundIndex + 1}"]`);
+
+                // Conectar pares de partidas da rodada atual para a próxima
+                for (let i = 0; i < nextRoundMatches.length; i++) {
+                    const match1 = currentRoundMatches[i * 2];
+                    const match2 = currentRoundMatches[i * 2 + 1];
+                    const nextMatch = nextRoundMatches[i];
+
+                    if (match1 && match2 && nextMatch) {
+                        drawConnectorLines(svg, match1, match2, nextMatch, roundIndex, i);
+                    }
+                }
+            });
+
+            // Adicionar eventos de hover para destacar caminhos
+            setupPathHighlight();
+        }
+
+        function setupPathHighlight() {
+            document.querySelectorAll('.bracket-match').forEach(matchEl => {
+                matchEl.addEventListener('mouseenter', function() {
+                    const round = parseInt(this.dataset.round);
+                    const matchIndex = parseInt(this.dataset.match);
+                    highlightPath(round, matchIndex);
+                });
+
+                matchEl.addEventListener('mouseleave', function() {
+                    clearHighlights();
+                });
+            });
+        }
+
+        function highlightPath(round, matchIndex) {
+            // Destacar o card atual
+            const currentMatch = document.querySelector(`[data-round="${round}"][data-match="${matchIndex}"]`);
+            if (currentMatch) {
+                currentMatch.classList.add('highlight-path');
+            }
+
+            // Destacar conexões para frente (próximas rodadas)
+            let nextRound = round + 1;
+            let nextMatchIndex = Math.floor(matchIndex / 2);
+            
+            while (nextRound < bracket.length) {
+                const nextMatch = document.querySelector(`[data-round="${nextRound}"][data-match="${nextMatchIndex}"]`);
+                if (nextMatch) {
+                    nextMatch.classList.add('highlight-path');
+                    
+                    // Destacar a linha conectora
+                    const pathId = `path-${round}-${matchIndex}-to-${nextRound}-${nextMatchIndex}`;
+                    const path = document.getElementById(pathId);
+                    if (path) {
+                        path.style.strokeWidth = '6';
+                        path.style.filter = 'drop-shadow(0 0 15px rgba(255, 204, 0, 1))';
+                    }
+                }
+                nextRound++;
+                nextMatchIndex = Math.floor(nextMatchIndex / 2);
+            }
+
+            // Destacar conexões para trás (rodadas anteriores)
+            if (round > 0) {
+                const prevRound = round - 1;
+                const match1Index = matchIndex * 2;
+                const match2Index = matchIndex * 2 + 1;
+                
+                const prevMatch1 = document.querySelector(`[data-round="${prevRound}"][data-match="${match1Index}"]`);
+                const prevMatch2 = document.querySelector(`[data-round="${prevRound}"][data-match="${match2Index}"]`);
+                
+                if (prevMatch1) prevMatch1.classList.add('highlight-path');
+                if (prevMatch2) prevMatch2.classList.add('highlight-path');
+                
+                // Destacar linhas anteriores
+                const pathId = `path-${prevRound}-${match1Index}-to-${round}-${matchIndex}`;
+                const path = document.getElementById(pathId);
+                if (path) {
+                    path.style.strokeWidth = '6';
+                    path.style.filter = 'drop-shadow(0 0 15px rgba(255, 204, 0, 1))';
+                }
+            }
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.highlight-path').forEach(el => {
+                el.classList.remove('highlight-path');
+            });
+
+            document.querySelectorAll('.bracket-connector-svg path').forEach(path => {
+                path.style.strokeWidth = '4';
+                path.style.filter = 'drop-shadow(0 0 8px rgba(255, 51, 102, 0.8))';
+            });
+        }
+
+        function drawConnectorLines(svg, match1, match2, nextMatch, roundIndex, nextMatchIndex) {
+            const rect1 = match1.getBoundingClientRect();
+            const rect2 = match2.getBoundingClientRect();
+            const rectNext = nextMatch.getBoundingClientRect();
+            const svgRect = svg.getBoundingClientRect();
+
+            // Pontos de saída (direita dos cards)
+            const x1 = rect1.right - svgRect.left;
+            const y1 = rect1.top + rect1.height / 2 - svgRect.top;
+            const x2 = rect2.right - svgRect.left;
+            const y2 = rect2.top + rect2.height / 2 - svgRect.top;
+
+            // Ponto de entrada (esquerda do próximo card)
+            const xNext = rectNext.left - svgRect.left;
+            const yNext = rectNext.top + rectNext.height / 2 - svgRect.top;
+
+            // Ponto médio para encontro
+            const xMid = x1 + (xNext - x1) / 2;
+
+            // Criar gradiente para a linha
+            const gradientId = `gradient-r${roundIndex}-m${nextMatchIndex}`;
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            gradient.setAttribute('id', gradientId);
+            gradient.setAttribute('x1', '0%');
+            gradient.setAttribute('y1', '0%');
+            gradient.setAttribute('x2', '100%');
+            gradient.setAttribute('y2', '0%');
+            
+            const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop1.setAttribute('offset', '0%');
+            stop1.setAttribute('style', 'stop-color:#ff3366;stop-opacity:1');
+            
+            const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop2.setAttribute('offset', '50%');
+            stop2.setAttribute('style', 'stop-color:#ff0055;stop-opacity:1');
+            
+            const stop3 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop3.setAttribute('offset', '100%');
+            stop3.setAttribute('style', 'stop-color:#00d4ff;stop-opacity:1');
+            
+            gradient.appendChild(stop1);
+            gradient.appendChild(stop2);
+            gradient.appendChild(stop3);
+            defs.appendChild(gradient);
+            svg.appendChild(defs);
+
+            // Criar path com linha mais grossa e ID único
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const pathId = `path-${roundIndex}-${nextMatchIndex * 2}-to-${roundIndex + 1}-${nextMatchIndex}`;
+            path.setAttribute('id', pathId);
+            
+            const d = `
+                M ${x1} ${y1}
+                L ${xMid} ${y1}
+                L ${xMid} ${y2}
+                L ${x2} ${y2}
+                M ${xMid} ${(y1 + y2) / 2}
+                L ${xNext} ${yNext}
+            `;
+            
+            path.setAttribute('d', d);
+            path.setAttribute('stroke', `url(#${gradientId})`);
+            path.setAttribute('stroke-width', '4');
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke-linecap', 'round');
+            path.setAttribute('stroke-linejoin', 'round');
+            path.style.filter = 'drop-shadow(0 0 8px rgba(255, 51, 102, 0.8))';
+            path.style.transition = 'all 0.3s ease';
+            
+            svg.appendChild(path);
+
+            // Adicionar círculo maior e mais brilhante no ponto de junção
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', xMid);
+            circle.setAttribute('cy', (y1 + y2) / 2);
+            circle.setAttribute('r', '6');
+            circle.setAttribute('fill', '#ff3366');
+            circle.style.filter = 'drop-shadow(0 0 10px rgba(255, 51, 102, 1))';
+            svg.appendChild(circle);
+            
+            // Círculo interno brilhante
+            const innerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            innerCircle.setAttribute('cx', xMid);
+            innerCircle.setAttribute('cy', (y1 + y2) / 2);
+            innerCircle.setAttribute('r', '3');
+            innerCircle.setAttribute('fill', '#ffffff');
+            innerCircle.style.opacity = '0.8';
+            svg.appendChild(innerCircle);
+
+            // Adicionar círculos menores nos pontos de conexão
+            [
+                {x: x1, y: y1},
+                {x: x2, y: y2},
+                {x: xNext, y: yNext}
+            ].forEach(point => {
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('cx', point.x);
+                dot.setAttribute('cy', point.y);
+                dot.setAttribute('r', '4');
+                dot.setAttribute('fill', '#00d4ff');
+                dot.style.filter = 'drop-shadow(0 0 6px rgba(0, 212, 255, 0.8))';
+                svg.appendChild(dot);
+            });
+        }
+
+        function createMatchCard(match, roundIndex) {
+            const isWaiting = !match.player1 || !match.player2;
+            
+            if (match.completed) {
+                return `
+                    <div class="match-card completed">
+                        <div class="match-title">✓ Finalizada</div>
+                        <div class="match-players">
+                            <div class="match-player ${match.winner === match.player1 ? 'winner' : ''}">
+                                <span class="player-name">${match.player1}</span>
+                                <span style="font-size: 1.5rem; font-weight: 700;">${match.score1}</span>
+                            </div>
+                            <div class="match-player ${match.winner === match.player2 ? 'winner' : ''}">
+                                <span class="player-name">${match.player2}</span>
+                                <span style="font-size: 1.5rem; font-weight: 700;">${match.score2}</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; color: var(--gray);">
+                            <div>💀 ${match.player1}: ${match.kills1 || 0} kills</div>
+                            <div>💀 ${match.player2}: ${match.kills2 || 0} kills</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (isWaiting) {
+                return `
+                    <div class="match-card waiting">
+                        <div class="match-title">⏳ Aguardando</div>
+                        <div class="match-players">
+                            <div class="match-player">
+                                <span class="player-name">???</span>
+                            </div>
+                            <div class="match-player">
+                                <span class="player-name">???</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="match-card">
+                    <div class="match-title">MD3</div>
+                    <div class="match-players">
+                        <div class="match-player">
+                            <div style="flex: 1;">
+                                <div class="player-name">${match.player1}</div>
+                                <div class="kills-input-group">
+                                    <span class="kills-label">Kills:</span>
+                                    <input type="number" class="kills-input" id="${match.id}_kills1" 
+                                           min="0" value="0" placeholder="0">
+                                </div>
+                            </div>
+                            <input type="number" class="score-input" id="${match.id}_score1" 
+                                   min="0" max="2" value="0" 
+                                   style="width: 50px; margin-left: auto;">
+                        </div>
+                        <div class="match-player">
+                            <div style="flex: 1;">
+                                <div class="player-name">${match.player2}</div>
+                                <div class="kills-input-group">
+                                    <span class="kills-label">Kills:</span>
+                                    <input type="number" class="kills-input" id="${match.id}_kills2" 
+                                           min="0" value="0" placeholder="0">
+                                </div>
+                            </div>
+                            <input type="number" class="score-input" id="${match.id}_score2" 
+                                   min="0" max="2" value="0"
+                                   style="width: 50px; margin-left: auto;">
+                        </div>
+                    </div>
+                    <button class="confirm-btn" onclick="confirmMatch('${match.id}', ${roundIndex})" 
+                            style="padding: 0.5rem; font-size: 0.85rem; margin-top: 0.75rem;">
+                        ✓ Confirmar
+                    </button>
+                </div>
+            `;
+        }
+
+        function confirmMatch(matchId, roundIndex) {
+            const score1 = parseInt(document.getElementById(`${matchId}_score1`).value) || 0;
+            const score2 = parseInt(document.getElementById(`${matchId}_score2`).value) || 0;
+            const kills1 = parseInt(document.getElementById(`${matchId}_kills1`).value) || 0;
+            const kills2 = parseInt(document.getElementById(`${matchId}_kills2`).value) || 0;
+
+            // Validar MD3
+            if (score1 < 0 || score2 < 0 || score1 > 2 || score2 > 2) {
+                showError('⚠️ Pontuações devem estar entre 0 e 2!');
+                return;
+            }
+
+            if ((score1 !== 2 && score2 !== 2) || (score1 === 2 && score2 === 2)) {
+                showError('⚠️ Em MD3, um jogador deve ter exatamente 2 vitórias!');
+                return;
+            }
+
+            if (kills1 < 0 || kills2 < 0) {
+                showError('⚠️ Número de kills não pode ser negativo!');
+                return;
+            }
+
+            const match = bracket[roundIndex].matches.find(m => m.id === matchId);
+            match.score1 = score1;
+            match.score2 = score2;
+            match.kills1 = kills1;
+            match.kills2 = kills2;
+            match.winner = score1 === 2 ? match.player1 : match.player2;
+            match.completed = true;
+
+            // Atualizar estatísticas dos jogadores
+            updatePlayerStats(match.player1, kills1, score1 === 2);
+            updatePlayerStats(match.player2, kills2, score2 === 2);
+
+            // Atualizar próxima rodada com o vencedor
+            updateNextRound(roundIndex);
+
+            // Verificar se todas as partidas da rodada foram completadas
+            const allCompleted = bracket[roundIndex].matches.every(m => m.completed);
+            
+            if (allCompleted) {
+                if (bracket[roundIndex].matches.length === 1) {
+                    // Final - mostrar campeão
+                    showChampion(match.winner);
+                    return;
+                }
+            }
+
+            displayBracket();
+            updateStatsPanel();
+        }
+
+        function updatePlayerStats(playerName, kills, won) {
+            if (!playerStats[playerName]) {
+                playerStats[playerName] = {
+                    name: playerName,
+                    totalKills: 0,
+                    matchesPlayed: 0,
+                    matchesWon: 0
+                };
+            }
+
+            playerStats[playerName].totalKills += kills;
+            playerStats[playerName].matchesPlayed += 1;
+            if (won) {
+                playerStats[playerName].matchesWon += 1;
+            }
+        }
+
+        function updateStatsPanel() {
+            const panel = document.getElementById('statsPanel');
+            if (!panel) return;
+
+            const sortedPlayers = Object.values(playerStats)
+                .sort((a, b) => b.totalKills - a.totalKills);
+
+            let html = '<div class="stats-title">🏆 RANKING MVP</div>';
+            
+            sortedPlayers.forEach((player, index) => {
+                const rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                
+                html += `
+                    <div class="stat-item ${rankClass}">
+                        <span class="stat-rank">${medal} #${index + 1}</span>
+                        <span class="stat-player">${player.name}</span>
+                        <span class="stat-kills">${player.totalKills} 💀</span>
+                    </div>
+                `;
+            });
+
+            panel.innerHTML = html;
+        }
+
+        function updateNextRound(currentRoundIndex) {
+            // Verificar se existe próxima rodada
+            if (currentRoundIndex + 1 >= bracket.length) return;
+
+            const currentMatches = bracket[currentRoundIndex].matches;
+            const nextRound = bracket[currentRoundIndex + 1];
+
+            // Atualizar jogadores na próxima rodada
+            for (let i = 0; i < nextRound.matches.length; i++) {
+                const match1 = currentMatches[i * 2];
+                const match2 = currentMatches[i * 2 + 1];
+                
+                if (match1 && match1.completed && match1.winner) {
+                    nextRound.matches[i].player1 = match1.winner;
+                }
+                if (match2 && match2.completed && match2.winner) {
+                    nextRound.matches[i].player2 = match2.winner;
+                }
+            }
+        }
+
+        function showChampion(winner) {
+            // Calcular TOP 3
+            const sortedPlayers = Object.values(playerStats)
+                .sort((a, b) => b.totalKills - a.totalKills)
+                .slice(0, 3);
+
+            const container = document.getElementById('championSection');
+            container.innerHTML = `
+                <div class="champion-banner">
+                    <div class="champion-title">🏆 CAMPEÃO DO TORNEIO 🏆</div>
+                    <div class="champion-name">${winner}</div>
+                </div>
+
+                <div style="margin-top: 3rem; text-align: center;">
+                    <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--accent); letter-spacing: 3px; margin-bottom: 2rem;">
+                        🌟 TOP 3 MVP 🌟
+                    </h2>
+                    <div class="mvp-podium">
+                        ${sortedPlayers.map((player, index) => {
+                            const place = index === 0 ? 'first' : index === 1 ? 'second' : 'third';
+                            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+                            const position = index + 1;
+                            
+                            return `
+                                <div class="podium-place ${place}">
+                                    <div class="podium-medal">${medal}</div>
+                                    <div class="podium-player">${player.name}</div>
+                                    <div class="podium-kills">${player.totalKills} 💀</div>
+                                    <div class="podium-base">${position}º</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; padding: 2rem; background: rgba(255, 255, 255, 0.05); border-radius: 20px;">
+                    <h3 style="font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: var(--secondary); text-align: center; margin-bottom: 1rem; letter-spacing: 2px;">
+                        📊 Estatísticas Completas
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                        ${Object.values(playerStats)
+                            .sort((a, b) => b.totalKills - a.totalKills)
+                            .map((player, index) => `
+                                <div class="stat-item ${index < 3 ? `top${index + 1}` : ''}">
+                                    <span class="stat-rank">#${index + 1}</span>
+                                    <span class="stat-player">${player.name}</span>
+                                    <span class="stat-kills">${player.totalKills} 💀</span>
+                                </div>
+                            `).join('')}
+                    </div>
+                </div>
+
+                <div class="btn-group" style="margin-top: 2rem;">
+                    <button onclick="resetTournament()">🔄 Novo Torneio</button>
+                </div>
+            `;
+            container.classList.remove('hidden');
+            
+            // Ocultar painel de estatísticas lateral
+            const panel = document.getElementById('statsPanel');
+            if (panel) panel.style.display = 'none';
+            
+            const toggleBtn = document.querySelector('.toggle-stats-btn');
+            if (toggleBtn) toggleBtn.style.display = 'none';
+        }
+
+        function resetTournament() {
+            groups = [];
+            bracket = [];
+            currentRound = 0;
+            playerStats = {};
+            
+            document.getElementById('setupSection').classList.remove('hidden');
+            document.getElementById('groupsSection').classList.add('hidden');
+            document.getElementById('bracketSection').classList.add('hidden');
+            document.getElementById('championSection').classList.add('hidden');
+            
+            // Remover painel de estatísticas
+            const panel = document.getElementById('statsPanel');
+            if (panel) panel.remove();
+            
+            const toggleBtn = document.querySelector('.toggle-stats-btn');
+            if (toggleBtn) toggleBtn.remove();
+            
+            document.getElementById('numGroups').value = '4';
+            document.getElementById('playerNames').value = '';
+        }
+    </script>
+</body>
+</html>
