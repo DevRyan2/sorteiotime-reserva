@@ -1090,18 +1090,22 @@ const UI = (() => {
             </div>
           </div>
           <div class="manual-tournament-box">
-            <label class="field-label">Formato do torneio</label>
-            <div class="tournament-format-group" id="tournament-format-group">
-              <label class="format-opt"><input type="radio" name="tournament-format" value="1" checked><span>Solo</span></label>
-              <label class="format-opt"><input type="radio" name="tournament-format" value="2"><span>Duo</span></label>
-              <label class="format-opt"><input type="radio" name="tournament-format" value="3"><span>3v3</span></label>
-              <label class="format-opt"><input type="radio" name="tournament-format" value="4"><span>Squad</span></label>
-            </div>
-            <label class="field-label" style="margin-top:16px">Nome das equipes</label>
-            <div class="tournament-name-mode">
-              <label class="format-opt"><input type="radio" name="tournament-name-mode" value="auto" checked><span>Automático</span></label>
-              <label class="format-opt"><input type="radio" name="tournament-name-mode" value="manual"><span>Manual</span></label>
-            </div>
+            <fieldset class="tournament-choice-section">
+              <legend class="field-label">Formato do torneio</legend>
+              <div class="tournament-format-group" id="tournament-format-group">
+                <label class="format-opt"><input type="radio" name="tournament-format" value="1" checked><span class="format-opt-card"><b class="format-opt-icon">⚡</b><strong>Solo</strong><small>1 jogador</small><i aria-hidden="true">✓</i></span></label>
+                <label class="format-opt"><input type="radio" name="tournament-format" value="2"><span class="format-opt-card"><b class="format-opt-icon">🤝</b><strong>Duo</strong><small>2 jogadores</small><i aria-hidden="true">✓</i></span></label>
+                <label class="format-opt"><input type="radio" name="tournament-format" value="3"><span class="format-opt-card"><b class="format-opt-icon">🛡️</b><strong>3v3</strong><small>3 jogadores</small><i aria-hidden="true">✓</i></span></label>
+                <label class="format-opt"><input type="radio" name="tournament-format" value="4"><span class="format-opt-card"><b class="format-opt-icon">🔥</b><strong>Squad</strong><small>4 jogadores</small><i aria-hidden="true">✓</i></span></label>
+              </div>
+            </fieldset>
+            <fieldset class="tournament-choice-section tournament-name-section">
+              <legend class="field-label">Nome das equipes</legend>
+              <div class="tournament-name-mode">
+                <label class="format-opt"><input type="radio" name="tournament-name-mode" value="auto" checked><span class="format-opt-card name-opt-card"><b class="format-opt-icon">✨</b><span><strong>Automático</strong><small>Criamos a partir dos participantes</small></span><i aria-hidden="true">✓</i></span></label>
+                <label class="format-opt"><input type="radio" name="tournament-name-mode" value="manual"><span class="format-opt-card name-opt-card"><b class="format-opt-icon">✏️</b><span><strong>Manual</strong><small>Você escolhe cada nome</small></span><i aria-hidden="true">✓</i></span></label>
+              </div>
+            </fieldset>
             <div class="team-editor-head">
               <div><label class="field-label">Equipes cadastradas</label><p class="field-help" id="tournament-format-help">Informe os participantes separados por vírgula.</p></div>
               <button class="btn btn-ghost btn-sm" onclick="UI.addTournamentTeam()">+ Adicionar equipe</button>
