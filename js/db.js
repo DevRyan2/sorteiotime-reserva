@@ -81,6 +81,28 @@ const DB = (() => {
   const onReady   = fn => { if(_ready) fn(); else { const t=setInterval(()=>{ if(_ready){clearInterval(t);fn();} },50); }};
   const setOnChange = fn => { _onChange = fn; };
 
+  const _requireAdminAuth = async () => {
+    const expectedEmail = window.FIREBASE_CONFIG?.adminEmail;
+    const user = firebase.auth().currentUser;
+    if (!user || user.email !== expectedEmail) {
+      Storage.setAdmin(false);
+      window.dispatchEvent(new CustomEvent('ff-auth-change'));
+      throw new Error('A sessão de admin expirou. Entre novamente no painel.');
+    }
+
+    // Atualiza o token antes de operações protegidas. Isso evita que uma
+    // troca recente do usuário anônimo para o admin use credenciais antigas.
+    await user.getIdToken(true);
+    return user;
+  };
+
+  const _friendlyWriteError = error => {
+    if (error?.code === 'PERMISSION_DENIED' || error?.code === 'permission-denied') {
+      return new Error('O Firebase recusou a gravação. Publique as regras de database.rules.json no Realtime Database.');
+    }
+    return error;
+  };
+
   // ── Sessões ────────────────────────────────────────────────────────────────
   const getSessions = () => Object.values(_cache).sort((a,b)=>b.createdAt-a.createdAt);
   const getSession  = id  => _cache[id] || null;
@@ -185,19 +207,33 @@ const DB = (() => {
 
   const saveTournament = async tournament => {
     if (!Storage.isAdmin()) throw new Error('Apenas o admin pode alterar o torneio.');
+    if (_usingFallback) {
+      _tournamentCache = tournament;
+      Storage.setTournament(tournament);
+      if (_onChange) _onChange('tournament');
+      return tournament;
+    }
+    await _requireAdminAuth();
+    try { await _db.ref('tournament').set(tournament); }
+    catch (error) { throw _friendlyWriteError(error); }
     _tournamentCache = tournament;
     Storage.setTournament(tournament);
-    if (_usingFallback) { if (_onChange) _onChange('tournament'); return tournament; }
-    await _db.ref('tournament').set(tournament);
     return tournament;
   };
 
   const clearTournament = async () => {
     if (!Storage.isAdmin()) throw new Error('Apenas o admin pode alterar o torneio.');
+    if (_usingFallback) {
+      _tournamentCache = null;
+      Storage.clearTournament();
+      if (_onChange) _onChange('tournament');
+      return;
+    }
+    await _requireAdminAuth();
+    try { await _db.ref('tournament').remove(); }
+    catch (error) { throw _friendlyWriteError(error); }
     _tournamentCache = null;
     Storage.clearTournament();
-    if (_usingFallback) { if (_onChange) _onChange('tournament'); return; }
-    await _db.ref('tournament').remove();
   };
 
   return {
