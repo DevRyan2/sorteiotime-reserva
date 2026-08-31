@@ -1,166 +1,102 @@
 # FF Squad Manager 🎮
 
-Gerenciador completo de partidas de Free Fire com **confirmações em tempo real via Firebase**.
+Gerenciador de salas, sorteios, perfis, estatísticas e torneios de Free Fire com Firebase Authentication e Realtime Database.
 
----
+## Segurança
 
-## 🚀 Como colocar no ar (GitHub Pages + Firebase)
+Este projeto é hospedado no GitHub Pages. Portanto, todo HTML, CSS, JavaScript e `firebaseConfig` enviado ao navegador é público e deve ser tratado como público.
 
-### Passo 1 — Criar o projeto no Firebase
+O `firebaseConfig` web — inclusive `apiKey`, `projectId` e `databaseURL` — identifica o projeto Firebase, mas não é uma credencial administrativa. A proteção real é feita por:
 
-1. Acesse **https://console.firebase.google.com**
-2. Clique em **"Adicionar projeto"**
-3. Dê um nome (ex: `ff-squad-manager`) → avançar → desativar Google Analytics → **Criar projeto**
-4. Quando terminar, clique em **"Continuar"**
+- Firebase Authentication;
+- Firebase Authentication para ações administrativas;
+- regras de segurança de [database.rules.json](database.rules.json);
+- validação de propriedade por `auth.uid`;
+- resultados oficiais imutáveis e vinculados a uma sala.
 
----
+Nunca coloque senhas, service accounts, chaves privadas ou tokens administrativos neste repositório.
 
-### Passo 2 — Ativar o Realtime Database
+## Configuração obrigatória do Firebase
 
-1. No menu lateral esquerdo, clique em **"Build" → "Realtime Database"**
-2. Clique em **"Criar banco de dados"**
-3. Escolha a região mais próxima (ex: `us-central1` é padrão)
-4. Em "Regras de segurança" → selecione **"Iniciar no modo de teste"** → **Ativar**
+### 1. Authentication
 
-   > Isso permite leitura e escrita públicas por 30 dias — suficiente pra usar normalmente.
-   > Depois desse prazo você pode renovar ou usar as regras abaixo.
+No Firebase Console, ative:
 
-**Regras recomendadas** (vão em "Regras" dentro do Realtime Database):
-```json
-{
-  "rules": {
-    "sessions": {
-      ".read": true,
-      ".write": true
-    }
-  }
-}
-```
+- **Anônimo**, usado pelos jogadores;
+- **E-mail/senha**, usado somente pelas contas administrativas.
 
----
+Jogadores são identificados pelo UID anônimo persistente do Firebase. O nick é apenas nome de exibição. `localStorage` não é autenticação e não guarda estatísticas oficiais.
 
-### Passo 3 — Pegar as credenciais do Firebase
+### 2. Realtime Database
 
-1. No menu lateral, clique no ícone de engrenagem ⚙️ → **"Configurações do projeto"**
-2. Role para baixo até **"Seus aplicativos"**
-3. Clique em **"</ >" (Web)**
-4. Dê um apelido (ex: `ff-web`) → clique **"Registrar app"**
-5. Vai aparecer um código assim:
-
-```js
-const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "ff-squad-manager.firebaseapp.com",
-  databaseURL: "https://ff-squad-manager-default-rtdb.firebaseio.com",
-  projectId: "ff-squad-manager",
-  storageBucket: "ff-squad-manager.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abc123"
-};
-```
-
-6. **Copie esses valores** e cole no arquivo `js/firebase-config.js` do projeto
-
----
-
-### Passo 4 — Configurar o firebase-config.js
-
-Abra o arquivo `js/firebase-config.js` e substitua os `"COLE_AQUI"` pelos valores do passo anterior:
-
-```js
-const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSy...",
-  authDomain:        "ff-squad-manager.firebaseapp.com",
-  databaseURL:       "https://ff-squad-manager-default-rtdb.firebaseio.com",  // <- obrigatório
-  projectId:         "ff-squad-manager",
-  storageBucket:     "ff-squad-manager.appspot.com",
-  messagingSenderId: "123456789",
-  appId:             "1:123456789:web:abc123",
-  adminEmail:        "painel@sorteiotime.app",
-  syncStats:         true,
-};
-```
-
-Salas, confirmações, perfis e histórico podem ser compartilhados. Para impedir alterações públicas, ative Firebase Authentication e publique o arquivo `database.rules.json` incluído neste projeto.
-
-### Ativar o painel seguro
-
-1. No Firebase Console, abra **Authentication → Sign-in method**.
-2. Ative os provedores **E-mail/senha** e **Anônimo**.
-3. Em **Authentication → Users**, crie o usuário `painel@sorteiotime.app` com a senha `PAINELRC`.
-4. Em **Realtime Database → Regras**, cole o conteúdo de `database.rules.json` e clique em **Publicar**.
-
-Se usar a Firebase CLI, os arquivos `.firebaserc` e `firebase.json` já estão preparados:
+Crie o Realtime Database e publique imediatamente o arquivo `database.rules.json` deste repositório:
 
 ```bash
 firebase deploy --only database
 ```
 
----
+Não use modo de teste em produção e nunca permita escrita pública. O modo de teste serve apenas para desenvolvimento isolado e temporário.
 
-### Passo 5 — Subir no GitHub Pages
+### 3. Configuração web
 
-1. Crie um repositório no GitHub (pode ser público ou privado)
-2. Faça upload de todos os arquivos:
-   ```
-   ff-sorteio/
-   ├── index.html
-   ├── css/style.css
-   └── js/
-       ├── firebase-config.js  ← com suas credenciais
-       ├── db.js
-       ├── storage.js
-       ├── players.js
-       ├── sorteio.js
-       ├── tournament.js
-       └── app.js
-   ```
-3. Vá em **Settings → Pages → Source: "Deploy from branch" → main → / (root)**
-4. Aguarde 1-2 minutos → seu site estará em `https://seunome.github.io/ff-sorteio`
+Preencha [js/firebase-config.js](js/firebase-config.js) com a configuração web exibida pelo Firebase Console:
 
----
-
-## 🔑 Senha de admin
-
-A senha de admin configurada é: **`PAINELRC`**
-
-Clique em "🔒 Admin" no canto superior direito e digite a senha.
-O login dura enquanto a aba estiver aberta (fecha a aba → precisa logar de novo). A senha não é armazenada em texto puro no frontend; o cliente compara somente seu hash. Como este repositório não possui backend, ações administrativas só terão proteção forte quando forem combinadas com Firebase Authentication e Security Rules.
-
----
-
-## ✨ Funcionalidades
-
-| Feature | Descrição |
-|---|---|
-| 🎲 **Sorteio** | Cola nomes, configura times, gera mensagem pro WhatsApp |
-| 📅 **Salas (admin)** | Cria sala com formato 1v1/2v2/3v3/4v4, copia link e manda pro grupo |
-| 📤 **Compartilhar sala** | Botão para enviar o link direto pelo WhatsApp |
-| 🔒 **Limite automático** | Só permite confirmações até a capacidade do formato; mostra "Sala cheia" e bloqueia entrada |
-| 🕒 **Data/hora padrão** | Campos de agendamento já vêm preenchidos com a hora atual no desktop |
-| ✅ **Confirmação** | Membro abre o link → digita o nick → aparece pra você em tempo real |
-| 🔒 **Anti-spam** | Cada dispositivo confirma uma única vez; pode corrigir o nick 1x |
-| 🎲 **Sorteio da sala** | Admin clica "Sortear times" com os confirmados e manda no WhatsApp |
-| 👤 **Perfis** | Stats de cada jogador: WR, MVPs, sequência, melhor dupla |
-| 🏅 **Conquistas** | Badges automáticos desbloqueados por desempenho |
-| 🏆 **Torneio** | Chaveamento automático tipo copa |
-
----
-
-## 📁 Estrutura de arquivos
-
+```js
+window.FIREBASE_CONFIG = {
+  apiKey: "...",
+  authDomain: "seu-projeto.firebaseapp.com",
+  databaseURL: "https://seu-projeto-default-rtdb.firebaseio.com",
+  projectId: "seu-projeto",
+  storageBucket: "seu-projeto.appspot.com",
+  messagingSenderId: "...",
+  appId: "...",
+  syncStats: true,
+};
 ```
-ff-sorteio/
-├── index.html              ← página principal
-├── README.md
-├── css/
-│   └── style.css           ← todos os estilos
+
+Esses valores podem ficar no frontend. Não adicione senhas ou service accounts a esse arquivo.
+
+## Modelo de dados protegido
+
+- `/players/{playerId}`: metadados do perfil; `playerId` é UUID e `ownerUid` é imutável.
+- `/userProfiles/{uid}`: associa um UID a um único perfil.
+- `/nickClaims/{nickNormalizado}`: reserva atômica que impede nicks duplicados.
+- `/sessions/{sessionId}`: salas; criação e gerenciamento exigem autenticação administrativa.
+- `/matches/{matchId}`: resultados oficiais imutáveis; somente administradores podem criar.
+
+Kills, vitórias, derrotas, MVPs, pontos e rank não são aceitos em `/players`. Essas estatísticas são derivadas exclusivamente de `/matches` oficiais.
+
+## Limitações importantes
+
+- Sem login tradicional, a identidade do jogador depende da credencial anônima mantida pelo Firebase no navegador. Limpar todos os dados do site ou trocar de navegador cria outra identidade.
+- Copiar apenas `localStorage` não copia a autenticação e não transfere o perfil.
+- Perfis criados pelo sistema antigo não têm prova confiável de propriedade. A associação desses perfis precisa ser tratada manualmente pelo administrador.
+- Limitação e detecção de abuso por IP/dispositivo exigem infraestrutura adicional, como Firebase App Check e uma Cloud Function ou backend confiável. Regras do Realtime Database não são um rate limiter completo.
+
+## Desenvolvimento local
+
+Use preferencialmente o Firebase Emulator Suite. Nunca aponte testes destrutivos para o banco de produção.
+
+Antes de publicar:
+
+1. valide as regras no Emulator Suite;
+2. confirme que o provedor Anônimo está ativo;
+3. publique `database.rules.json`;
+4. teste criação de perfil, reserva de nick, confirmação e finalização de partida.
+
+## Estrutura
+
+```text
+├── index.html
+├── database.rules.json
+├── firebase.json
+├── css/style.css
 └── js/
-    ├── firebase-config.js  ← VOCÊ EDITA ESSE ← credenciais Firebase
-    ├── db.js               ← integração Firebase (tempo real)
-    ├── storage.js          ← dados locais (jogadores, partidas, torneio)
-    ├── players.js          ← perfis, stats, conquistas
-    ├── sorteio.js          ← lógica de sorteio
-    ├── tournament.js       ← chaveamento tipo copa
-    └── app.js              ← controlador da UI
+    ├── firebase-config.js
+    ├── db.js
+    ├── storage.js
+    ├── players.js
+    ├── sorteio.js
+    ├── tournament.js
+    └── app.js
 ```

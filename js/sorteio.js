@@ -7,11 +7,15 @@ const Sorteio = (() => {
 
   const getPlayers = () => players;
   const getTeams   = () => teams;
+  const cleanPlayerName = value => {
+    const name=String(value||'').trim().replace(/\s+/g,' ');
+    return name.length>=3 && name.length<=20 && /^[\p{L}\p{N}_. -]+$/u.test(name) && !/[<>"'`]/.test(name) ? name : '';
+  };
 
   // ── Pool de jogadores ──────────────────────────────────────────────────────
   const addPlayer = (name) => {
-    name = name.trim();
-    if (!name || name.length > 60) return { ok: false, reason: 'invalid' };
+    name = cleanPlayerName(name);
+    if (!name) return { ok: false, reason: 'invalid' };
     if (players.includes(name)) return { ok: false, reason: 'dup' };
     players.push(name);
     return { ok: true };
@@ -23,8 +27,8 @@ const Sorteio = (() => {
 
   const parseText = (text) => {
     const lines = text.split('\n')
-      .map(l => l.replace(/^[\d.\-*•→☑✓]+\s*/, '').trim())
-      .filter(l => l.length > 1 && l.length < 60);
+      .map(l => cleanPlayerName(l.replace(/^[\d.\-*•→☑✓]+\s*/, '')))
+      .filter(Boolean);
     let added = 0;
     lines.forEach(n => { if (n && !players.includes(n)) { players.push(n); added++; } });
     return added;
@@ -95,31 +99,5 @@ const Sorteio = (() => {
     ].join('\n');
   };
 
-  // ── Salvar resultado (para histórico + perfis) ───────────────────────────
-  const saveResult = (winnerTeamIdx, mvpNick, eventName) => {
-    const matchDate = Date.now();
-    const match = Storage.addMatch({
-      eventName: eventName || '',
-      teams:     teams.map(t => [...t]),
-      winner:    winnerTeamIdx,
-      mvp:       mvpNick || null,
-      date:      matchDate,
-    });
-
-    const newAchievements = {};
-    teams.forEach((team, ti) => {
-      const won = ti === winnerTeamIdx;
-      team.forEach(nick => {
-        // Registrar só se jogador existir no cadastro
-        if (Storage.getPlayer(nick)) {
-          const earned = Players.recordMatch(nick, { won, mvp: nick === mvpNick, matchDate, matchId: match.id });
-          if (earned && earned.length > 0) newAchievements[nick] = earned;
-        }
-      });
-    });
-
-    return { match, newAchievements };
-  };
-
-  return { getPlayers, getTeams, addPlayer, removePlayer, setPlayers, parseText, clearPlayers, draw, buildMessage, getRulesText, saveResult };
+  return { getPlayers, getTeams, addPlayer, removePlayer, setPlayers, parseText, clearPlayers, draw, buildMessage, getRulesText };
 })();

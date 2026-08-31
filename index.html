@@ -612,6 +612,7 @@
                                 class="field-sm"
                                 id="session-name"
                                 placeholder="Ex: Pelada de Sexta"
+                                maxlength="60"
                             />
                         </div>
                         <div style="flex: 1; min-width: 140px">
@@ -637,7 +638,7 @@
                                         value=""
                                         checked
                                     />
-                                    <span>Livre</span>
+                                    <span class="session-format-card"><b>✨</b><strong>Livre</strong><small>Divisão automática</small><i>✓</i></span>
                                 </label>
                                 <label class="format-opt">
                                     <input
@@ -645,7 +646,7 @@
                                         name="session-format-radio"
                                         value="1v1"
                                     />
-                                    <span>1v1</span>
+                                    <span class="session-format-card"><b>⚡</b><strong>1v1</strong><small>2 jogadores</small><i>✓</i></span>
                                 </label>
                                 <label class="format-opt">
                                     <input
@@ -653,7 +654,7 @@
                                         name="session-format-radio"
                                         value="2v2"
                                     />
-                                    <span>2v2</span>
+                                    <span class="session-format-card"><b>🤝</b><strong>2v2</strong><small>4 jogadores</small><i>✓</i></span>
                                 </label>
                                 <label class="format-opt">
                                     <input
@@ -661,7 +662,7 @@
                                         name="session-format-radio"
                                         value="3v3"
                                     />
-                                    <span>3v3</span>
+                                    <span class="session-format-card"><b>🛡️</b><strong>3v3</strong><small>6 jogadores</small><i>✓</i></span>
                                 </label>
                                 <label class="format-opt">
                                     <input
@@ -669,11 +670,12 @@
                                         name="session-format-radio"
                                         value="4v4"
                                     />
-                                    <span>4v4</span>
+                                    <span class="session-format-card"><b>🔥</b><strong>4v4</strong><small>8 jogadores</small><i>✓</i></span>
                                 </label>
                             </div>
                             <!-- valor lido pelo JS via radio -->
                             <input type="hidden" id="session-format" value="" />
+                            <p class="format-selected-text" id="session-format-feedback">✓ Formato Livre selecionado</p>
                         </div>
                     </div>
                     <div class="btn-bar">
@@ -798,6 +800,37 @@
         </div>
         <!-- /wrap -->
 
+        <!-- Modal: gerenciamento administrativo de jogador -->
+        <div class="modal-backdrop hidden" id="modal-player-admin">
+            <div class="modal-box" style="max-width: 560px" role="dialog" aria-modal="true" aria-labelledby="player-admin-title">
+                <div class="modal-head">
+                    <div class="modal-title" id="player-admin-title">⚙️ Gerenciar jogador</div>
+                    <button class="modal-close" id="player-admin-close" aria-label="Fechar">✕</button>
+                </div>
+                <p class="modal-description">Os valores abaixo são ajustes auditáveis aplicados sobre as partidas oficiais. Use números negativos para remover.</p>
+                <div class="modal-field-group">
+                    <label class="field-label" for="player-admin-nick">Nick</label>
+                    <input class="field-full" id="player-admin-nick" maxlength="20" />
+                </div>
+                <div class="admin-adjust-grid">
+                    <label><span>Pontos</span><input class="field-full" id="player-adjust-points" type="number" step="1" /></label>
+                    <label><span>Vitórias</span><input class="field-full" id="player-adjust-wins" type="number" step="1" /></label>
+                    <label><span>Derrotas</span><input class="field-full" id="player-adjust-losses" type="number" step="1" /></label>
+                    <label><span>Kills</span><input class="field-full" id="player-adjust-kills" type="number" step="1" /></label>
+                    <label><span>MVPs</span><input class="field-full" id="player-adjust-mvps" type="number" step="1" /></label>
+                </div>
+                <div class="modal-field-group">
+                    <label class="field-label" for="player-adjust-reason">Motivo da correção</label>
+                    <input class="field-full" id="player-adjust-reason" maxlength="120" placeholder="Ex: correção de resultado duplicado" />
+                </div>
+                <p class="field-error hidden" id="player-admin-error"></p>
+                <div class="player-admin-actions">
+                    <button class="btn btn-danger" id="btn-delete-player">🗑 Apagar perfil</button>
+                    <button class="btn btn-primary" id="btn-save-player-admin">Salvar alterações</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal: Finalizar partida -->
         <div class="modal-backdrop hidden" id="modal-finish-match">
             <div class="modal-box" style="max-width: 500px">
@@ -833,6 +866,11 @@
                         id="finish-mvp-sel"
                         style="margin-top: 4px"
                     ></select>
+                </div>
+                <div class="modal-field-group">
+                    <label class="field-label">Kills por jogador</label>
+                    <div id="finish-kills-list" class="finish-kills-list"></div>
+                    <p class="field-error hidden" id="finish-kills-error"></p>
                 </div>
                 <div class="btn-bar">
                     <button class="btn btn-secondary" id="btn-cancel-finish">
@@ -929,6 +967,8 @@
                             const hidden =
                                 document.getElementById('session-format');
                             if (hidden) hidden.value = r.value;
+                            const feedback = document.getElementById('session-format-feedback');
+                            if (feedback) feedback.textContent = `✓ Formato ${r.value || 'Livre'} selecionado`;
                         });
                     });
             });

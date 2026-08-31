@@ -1,6 +1,7 @@
 // storage.js — camada de dados (localStorage)
 
 const Storage = (() => {
+  let runtimePlayers = null, runtimeMatches = null;
   const K = {
     PLAYERS:  'ff_players',
     MATCHES:  'ff_matches',
@@ -30,8 +31,9 @@ const Storage = (() => {
   const set = (key, val) => localStorage.setItem(key, JSON.stringify(val));
 
   // ── Players ──────────────────────────────────────────────────────────────
-  const getPlayers  = ()  => get(K.PLAYERS) || {};
-  const setPlayers  = (p) => set(K.PLAYERS, p);
+  const usesBackend = () => window.FIREBASE_CONFIG?.databaseURL && window.FIREBASE_CONFIG.databaseURL !== 'COLE_AQUI';
+  const getPlayers  = ()  => usesBackend() ? (runtimePlayers || {}) : (get(K.PLAYERS) || {});
+  const setPlayers  = p => { if (usesBackend()) runtimePlayers=p; else set(K.PLAYERS,p); };
 
   const getPlayer = (nick) => getPlayers()[nick] || null;
 
@@ -57,18 +59,12 @@ const Storage = (() => {
   };
 
   // ── Matches ───────────────────────────────────────────────────────────────
-  const getMatches = () => get(K.MATCHES) || [];
+  const getMatches = () => usesBackend() ? (runtimeMatches || []) : (get(K.MATCHES) || []);
+  const setRuntimeMatches = matches => { runtimeMatches=Array.isArray(matches)?matches:[]; };
 
-  const addMatch = (match) => {
-    const all = getMatches();
-    const m = { id: Date.now(), createdAt: Date.now(), ...match };
-    all.unshift(m);
-    set(K.MATCHES, all);
-    return m;
-  };
-
-  const deleteMatch = (id) => {
-    set(K.MATCHES, getMatches().filter(m => m.id !== id));
+  const getCurrentSeason = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   };
 
   // ── Sessions (agendamento) ────────────────────────────────────────────────
@@ -142,19 +138,22 @@ const Storage = (() => {
   const getNickEdits     = () => get('ff_my_nick_edits') || 0;
   const incrementNickEdits = () => set('ff_my_nick_edits', getNickEdits() + 1);
 
-  const checkPassword = async (pw) => {
+  const authenticateAdmin = async pw => {
     if (typeof pw !== 'string' || !window.firebase?.auth) return false;
     try {
-      await firebase.auth().signInWithEmailAndPassword(window.FIREBASE_CONFIG.adminEmail, pw.trim());
-      const isExpectedUser = firebase.auth().currentUser?.email === window.FIREBASE_CONFIG.adminEmail;
-      setAdmin(isExpectedUser);
-      return isExpectedUser;
-    } catch { return false; }
+      const adminEmail=window.FIREBASE_CONFIG?.adminEmail;
+      if(!adminEmail) return false;
+      const credential=await firebase.auth().signInWithEmailAndPassword(adminEmail,pw);
+      const token=await credential.user.getIdTokenResult(true);
+      const authorized=token.claims.email===adminEmail;
+      if(!authorized) await firebase.auth().signOut();
+      setAdmin(authorized); return authorized;
+    } catch { setAdmin(false); return false; }
   };
 
   // ── Scoring Configuration ─────────────────────────────────────────────────
-  const getScoringConfig  = ()    => get(K.SCORING_CONFIG) || DEFAULT_SCORING;
-  const setScoringConfig  = (cfg) => set(K.SCORING_CONFIG, cfg);
+  const getScoringConfig  = () => JSON.parse(JSON.stringify(DEFAULT_SCORING));
+  const setScoringConfig  = () => false;
 
   const calculateRank = (points) => {
     const cfg = getScoringConfig();
@@ -164,15 +163,6 @@ const Storage = (() => {
     return cfg.ranks[0].name;
   };
 
-  const addPoints = (nick, pts) => {
-    const p = getPlayer(nick);
-    if (!p) return null;
-    p.points = (p.points || 0) + pts;
-    p.rank   = calculateRank(p.points);
-    upsertPlayer(nick, p);
-    return p;
-  };
-
   // ── Tournament ────────────────────────────────────────────────────────────
   const getTournament  = ()  => get(K.TOURNAMENT);
   const setTournament  = (t) => set(K.TOURNAMENT, t);
@@ -180,13 +170,14 @@ const Storage = (() => {
 
   return {
     getPlayers, setPlayers, getPlayer, upsertPlayer, deletePlayer,
-    getMatches, addMatch, deleteMatch,
+    getMatches, setRuntimeMatches,
     getSessions, addSession, updateSession, deleteSession,
     addConfirmed, replaceConfirmed, removeConfirmed,
     getMyConfirmation, setMyConfirmation,
-    isAdmin, setAdmin, checkPassword,
+    isAdmin, setAdmin, authenticateAdmin,
     getMyNick, setMyNick, getNickEdits, incrementNickEdits,
-    getScoringConfig, setScoringConfig, calculateRank, addPoints,
+    getScoringConfig, setScoringConfig, calculateRank,
+    getCurrentSeason,
     getTournament, setTournament, clearTournament,
   };
 })();

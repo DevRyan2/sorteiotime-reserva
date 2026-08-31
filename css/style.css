@@ -216,6 +216,27 @@ input.invite-link-out { background:rgba(0,0,0,0.5);border:1px solid rgba(37,211,
 .stat-streak { font-size:13px;font-weight:600;text-align:center;padding:10px;background:rgba(0,0,0,0.2);border-radius:12px;margin-bottom:16px; }
 .section-title { font-family:'Syne',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:20px 0 10px; }
 .chart-wrap { background:rgba(0,0,0,0.3);border:1px solid var(--border2);border-radius:14px;padding:14px;overflow:hidden; }
+.season-summary { display:grid;grid-template-columns:repeat(5,1fr);gap:8px; }
+.season-summary span { padding:12px 8px;border:1px solid var(--border2);border-radius:12px;background:rgba(0,0,0,.25);color:var(--muted);font-size:11px;text-align:center; }
+.season-summary b { display:block;margin-bottom:3px;color:var(--accent);font:800 19px 'Syne',sans-serif; }
+.profile-share-actions { display:flex;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border2); }
+.profile-share-actions .btn { flex:1; }
+.finish-kills-list { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px; }
+.finish-team-kills { min-width:0;padding:12px;border:1px solid var(--border2);border-radius:13px;background:rgba(0,0,0,.2); }
+.finish-team-kills legend { padding:0 6px;color:var(--accent);font-size:11px;font-weight:700; }
+.finish-kill-row { display:grid;grid-template-columns:minmax(0,1fr) 72px;align-items:center;gap:8px;margin-bottom:7px;color:var(--text);font-size:12px; }
+.finish-kill-row span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.finish-kill-row input { padding:8px;text-align:center; }
+.leaderboard-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px; }
+.leaderboard-grid .card { margin-bottom:0; }
+.closed-badge { display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.25);color:var(--red);font-size:9px;text-transform:uppercase;letter-spacing:.6px; }
+.match-kills { margin-top:6px;color:var(--muted);font-size:11px;line-height:1.5; }
+.official-result-badge { padding:3px 8px;border:1px solid rgba(37,211,102,.22);border-radius:999px;color:var(--accent);font-size:9px;font-weight:700;text-transform:uppercase; }
+.admin-adjust-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px; }
+.admin-adjust-grid label>span { display:block;margin-bottom:5px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px; }
+.player-admin-actions { display:flex;justify-content:space-between;gap:10px;margin-top:18px; }
+.btn-danger { background:rgba(255,77,109,.12);border:1px solid rgba(255,77,109,.35);color:var(--red); }
+.btn-danger:hover { background:rgba(255,77,109,.22); }
 
 /* ── Best mates ─────────────────────────────────────────────────────────── */
 .mates-list { display:flex;flex-direction:column;gap:6px; }
@@ -340,6 +361,18 @@ input.invite-link-out { background:rgba(0,0,0,0.5);border:1px solid rgba(37,211,
 .format-opt input:checked+.format-opt-card strong { color:var(--accent); }
 .format-opt input:checked+.format-opt-card>i { opacity:1;transform:scale(1); }
 .format-opt input:focus-visible+.format-opt-card { outline:3px solid rgba(110,255,160,.35);outline-offset:2px; }
+.format-select-group { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-top:7px; }
+.session-format-card { position:relative;min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 7px;border:1px solid rgba(255,255,255,.09);border-radius:13px;background:rgba(255,255,255,.025);text-align:center;transition:.2s; }
+.session-format-card>b { font-size:18px;line-height:1; }
+.session-format-card strong { color:var(--text);font-size:13px; }
+.session-format-card small { color:var(--muted);font-size:9px; }
+.session-format-card i { position:absolute;right:7px;top:7px;width:17px;height:17px;display:grid;place-items:center;border-radius:50%;background:var(--green);color:#06100b;font-size:10px;font-style:normal;font-weight:900;opacity:0;transform:scale(.5);transition:.2s; }
+.format-opt:hover .session-format-card { transform:translateY(-2px);border-color:rgba(110,255,160,.3); }
+.format-opt input:checked+.session-format-card { border-color:var(--green);background:linear-gradient(145deg,rgba(37,211,102,.2),rgba(37,211,102,.07));box-shadow:0 0 0 2px rgba(37,211,102,.1),0 8px 24px rgba(0,0,0,.2); }
+.format-opt input:checked+.session-format-card strong { color:var(--accent); }
+.format-opt input:checked+.session-format-card i { opacity:1;transform:scale(1); }
+.format-opt input:focus-visible+.session-format-card { outline:3px solid rgba(110,255,160,.35);outline-offset:2px; }
+.format-selected-text { margin-top:9px;color:var(--accent);font-size:11px;font-weight:700; }
 .name-opt-card { min-height:76px;flex-direction:row;justify-content:flex-start;gap:11px;padding:13px 38px 13px 14px;text-align:left; }
 .name-opt-card .format-opt-icon { margin:0;width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border-radius:10px;background:rgba(255,255,255,.055); }
 .team-editor-head { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:18px 0 10px; }
@@ -407,6 +440,7 @@ input.invite-link-out { background:rgba(0,0,0,0.5);border:1px solid rgba(37,211,
   .tournament-mode-grid { grid-template-columns:1fr; }
   .manual-tournament-box { padding:14px; }
   .tournament-format-group { grid-template-columns:repeat(2,1fr); }
+  .format-select-group { grid-template-columns:repeat(2,1fr); }
   .tournament-name-mode { grid-template-columns:1fr; }
   .team-editor-head { flex-direction:column; }
   .tournament-team-editor { grid-template-columns:1fr; }
@@ -418,6 +452,9 @@ input.invite-link-out { background:rgba(0,0,0,0.5);border:1px solid rgba(37,211,
   .bracket-scroll::after { content:'Arraste para ver as próximas rodadas →';display:block;position:sticky;left:0;color:var(--muted);font-size:10px;padding-top:10px; }
   .toast { left:14px;right:14px;bottom:14px;text-align:center; }
   .stats-grid { grid-template-columns:repeat(2,1fr); }
+  .season-summary { grid-template-columns:repeat(2,1fr); }
+  .finish-kills-list,.leaderboard-grid { grid-template-columns:1fr; }
+  .admin-adjust-grid { grid-template-columns:1fr; }
   .stp-label { display:none; }
   .stp-line { width:32px; }
   .hero-title { letter-spacing:-3px; }

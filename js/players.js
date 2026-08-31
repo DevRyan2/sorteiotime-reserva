@@ -17,36 +17,24 @@ const ACHIEVEMENTS_DEF = [
 ];
 
 const Players = (() => {
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   const getAll  = () => Storage.getPlayers();
   const getList = () => Object.values(getAll()).sort((a,b) => (b.points||0) - (a.points||0));
-
-  // Cria perfil sem rank manual — rank é calculado pelo sistema
-  const register = (nick) => {
-    if (Storage.getPlayer(nick)) return false;
-    Storage.upsertPlayer(nick, { nick });
-    DB.upsertPlayer(nick, Storage.getPlayer(nick)).catch(()=>{});
-    return true;
-  };
-
-  // Cria perfil silenciosamente (chamado ao confirmar presença em sessão)
-  const autoRegister = (nick) => {
-    if (Storage.getPlayer(nick)) return false;
-    Storage.upsertPlayer(nick, { nick });
-    DB.upsertPlayer(nick, Storage.getPlayer(nick)).catch(()=>{});
-    return true;
-  };
 
   const getStats = (nick) => {
     const p = Storage.getPlayer(nick);
     if (!p) return null;
     const matches = p.matches || [];
 
-    const wins    = matches.filter(m => m.won).length;
-    const losses  = matches.filter(m => !m.won).length;
-    const mvps    = matches.filter(m => m.mvp).length;
-    const total   = matches.length;
+    const adjustment=p.adjustments||{};
+    const wins    = Math.max(0,matches.filter(m => m.won).length+(Number(adjustment.wins)||0));
+    const losses  = Math.max(0,matches.filter(m => !m.won).length+(Number(adjustment.losses)||0));
+    const mvps    = Math.max(0,matches.filter(m => m.mvp).length+(Number(adjustment.mvps)||0));
+    const total   = wins+losses;
     const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+    const kills   = Math.max(0,matches.reduce((sum, m) => sum + (Number(m.kills) || 0), 0)+(Number(adjustment.kills)||0));
+    const avgKills= total > 0 ? Number((kills / total).toFixed(1)) : 0;
 
     // Sequência atual
     let streak = 0, streakType = null;
@@ -90,7 +78,21 @@ const Players = (() => {
       .sort(([a],[b]) => a.localeCompare(b)).slice(-6)
       .map(([,v]) => ({ label: v.label, wr: Math.round((v.wins/v.total)*100) }));
 
-    return { wins, losses, mvps, winrate, streak, streakType, bestMates, monthlyChart, total };
+    const seasonKey = Storage.getCurrentSeason();
+    const seasonMatches = matches.filter(m => {
+      const d = new Date(m.date || m.matchDate || 0);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` === seasonKey;
+    });
+    const seasonWins = seasonMatches.filter(m => m.won).length;
+    const seasonKills = seasonMatches.reduce((sum,m) => sum + (Number(m.kills)||0), 0);
+    const season = {
+      key: seasonKey, total: seasonMatches.length, wins: seasonWins,
+      losses: seasonMatches.length - seasonWins, kills: seasonKills,
+      mvps: seasonMatches.filter(m => m.mvp).length,
+      winrate: seasonMatches.length ? Math.round(seasonWins / seasonMatches.length * 100) : 0,
+    };
+
+    return { wins, losses, mvps, winrate, kills, avgKills, streak, streakType, bestMates, monthlyChart, total, season };
   };
 
   // Stats filtrados por período (para a aba Rank)
@@ -106,18 +108,8 @@ const Players = (() => {
     const pts     = since === 0
       ? (p.points || 0)
       : wins * (cfg.pointsPerWin||10) + mvps * (cfg.pointsPerMvp||15);
-    return { wins, mvps, total, winrate, pts };
-  };
-
-  const recordMatch = (nick, { won, mvp, matchDate, matchId }) => {
-    const p = Storage.getPlayer(nick);
-    if (!p) return;
-    const entry = { won, mvp: !!mvp, date: matchDate || Date.now(), matchId };
-    Storage.upsertPlayer(nick, { matches: [...(p.matches||[]), entry] });
-    const achievements = checkAchievements(nick);
-    // Sync para Firebase (fire & forget)
-    DB.upsertPlayer(nick, Storage.getPlayer(nick)).catch(()=>{});
-    return achievements;
+    const kills = matches.reduce((sum,m) => sum + (Number(m.kills)||0), 0);
+    return { wins, mvps, total, winrate, kills, pts };
   };
 
   const checkAchievements = (nick) => {
@@ -189,23 +181,25 @@ const Players = (() => {
       ? `${stats.streakType?'🔥':'❄️'} ${stats.streak} ${stats.streakType?'vitórias':'derrotas'} seguidas` : '—';
 
     const matesHTML = stats.bestMates.length > 0
-      ? stats.bestMates.map(m=>`<div class="mate-row"><span class="mate-name">${m.name}</span><span class="mate-wr" style="color:${m.wr>=60?'var(--green)':m.wr>=40?'var(--accent)':'var(--red)'}">${m.wr}% WR</span><span class="mate-games">${m.games}j</span></div>`).join('')
+      ? stats.bestMates.map(m=>`<div class="mate-row"><span class="mate-name">${esc(m.name)}</span><span class="mate-wr" style="color:${m.wr>=60?'var(--green)':m.wr>=40?'var(--accent)':'var(--red)'}">${m.wr}% WR</span><span class="mate-games">${m.games}j</span></div>`).join('')
       : `<span style="color:var(--muted);font-size:12px">Dados insuficientes (mín. 2 partidas juntos)</span>`;
 
-    const adminDeleteBtn = Storage.isAdmin()
-      ? `<button class="btn btn-ghost btn-sm" onclick="UI.deletePlayer('${nick}')">🗑 Deletar</button>` : '';
+    const adminDeleteBtn = Storage.isAdmin() ? `<button class="btn btn-ghost btn-sm" onclick="UI.openPlayerAdmin(decodeURIComponent('${encodeURIComponent(nick)}'))">⚙️ Gerenciar</button>` : '';
 
+    const rankingPosition = getList().findIndex(player => player.nick === nick) + 1;
+    const isOwnProfile = Storage.getMyNick().toLocaleLowerCase('pt-BR') === nick.toLocaleLowerCase('pt-BR');
     return `
       <div class="profile-header">
         <div class="profile-avatar">${nick.charAt(0).toUpperCase()}</div>
         <div class="profile-info">
-          <div class="profile-nick">${nick}</div>
+          <div class="profile-nick">${esc(nick)}</div>
           <div class="profile-rank rank-tag">${p.rank || 'Bronze'}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">${p.points||0} pontos</div>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          ${isOwnProfile ? `<button class="btn btn-ghost btn-sm" onclick="UI.promptEditNick()">✏️ Trocar perfil</button>` : ''}
           ${adminDeleteBtn}
-          <button class="btn btn-ghost btn-sm" onclick="UI.showTab('jogadores')">← Voltar</button>
+          <button class="btn btn-ghost btn-sm" onclick="UI.closePlayerProfile()">← Voltar</button>
         </div>
       </div>
       <div class="stats-grid">
@@ -213,16 +207,28 @@ const Players = (() => {
         <div class="stat-box"><div class="stat-val" style="color:var(--red)">${stats.losses}</div><div class="stat-lbl">Derrotas</div></div>
         <div class="stat-box"><div class="stat-val" style="color:var(--accent)">${stats.winrate}%</div><div class="stat-lbl">WR</div></div>
         <div class="stat-box"><div class="stat-val">${stats.mvps}</div><div class="stat-lbl">MVPs</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:var(--accent)">${stats.kills}</div><div class="stat-lbl">Kills</div></div>
+        <div class="stat-box"><div class="stat-val">${stats.avgKills}</div><div class="stat-lbl">Média kills</div></div>
+        <div class="stat-box"><div class="stat-val">${stats.total}</div><div class="stat-lbl">Partidas</div></div>
+        <div class="stat-box"><div class="stat-val">#${rankingPosition || '—'}</div><div class="stat-lbl">Ranking</div></div>
       </div>
       <div class="stat-streak" style="color:${streakColor}">${streakLabel}</div>
       <div class="section-title">📈 WinRate por mês</div>
       <div class="chart-wrap">${renderWinrateChart(stats.monthlyChart)}</div>
       <div class="section-title">🤝 Melhor dupla</div>
       <div class="mates-list">${matesHTML}</div>
+      <div class="section-title">🗓 Temporada atual</div>
+      <div class="season-summary">
+        <span><b>${stats.season.total}</b> partidas</span><span><b>${stats.season.wins}</b> vitórias</span><span><b>${stats.season.winrate}%</b> WR</span><span><b>${stats.season.kills}</b> kills</span><span><b>${stats.season.mvps}</b> MVPs</span>
+      </div>
       <div class="section-title">🏅 Conquistas</div>
       <div class="ach-list">${achHTML}</div>
+      <div class="profile-share-actions">
+        <button class="btn btn-primary" onclick="UI.downloadPlayerCard(decodeURIComponent('${encodeURIComponent(nick)}'))">⬇ Baixar Card</button>
+        <button class="btn btn-wa" onclick="UI.sharePlayerCard(decodeURIComponent('${encodeURIComponent(nick)}'))">📤 Compartilhar</button>
+      </div>
     `;
   };
 
-  return { getAll, getList, register, autoRegister, getStats, getStatsInPeriod, recordMatch, checkAchievements, renderProfile, renderWinrateChart };
+  return { getAll, getList, getStats, getStatsInPeriod, checkAchievements, renderProfile, renderWinrateChart };
 })();
