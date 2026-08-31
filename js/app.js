@@ -1045,6 +1045,15 @@ const UI = (() => {
       <div class="card-head"><div class="card-title"><div class="card-icon">🧩</div> Montagem dos confrontos</div><span class="save-live-label">● Salvo ao vivo</span></div>
       <p class="field-help">Defina a disponibilidade e ajuste somente as posições necessárias. Confrontos definidos manualmente ficam protegidos da sugestão inteligente.</p>
       <div class="team-status-grid">${(bracket.teams||[]).map(team=>`<button class="team-status-button ${team.available===false?'is-unavailable':'is-available'}" onclick="UI.toggleTournamentAvailability('${team.id}')"><span>${team.available===false?'🔴':'🟢'}</span><strong>${escapeHTML(team.name)}</strong><small>${team.available===false?'Indisponível':'Disponível'}</small></button>`).join('')}</div>
+      <div class="bracket-tool-actions"><button class="btn btn-ghost btn-sm" onclick="UI.toggleTournamentNamesEditor()">✏️ Corrigir nomes</button></div>
+      <div class="tournament-names-editor hidden" id="tournament-names-editor">
+        <p class="field-help">Corrija os nomes abaixo. Resultados, kills e MVPs já registrados serão mantidos.</p>
+        ${(bracket.teams||[]).map((team,index)=>`<div class="tournament-name-edit-row" data-team-id="${team.id}">
+          <label><span>Equipe ${index+1}</span><input class="field-full tournament-edit-team-name" maxlength="40" value="${escapeHTML(team.name)}"></label>
+          <label><span>${team.members.length===1?'Jogador':'Jogadores (separados por vírgula)'}</span><input class="field-full tournament-edit-members" maxlength="240" value="${escapeHTML(team.members.join(', '))}"></label>
+        </div>`).join('')}
+        <button class="btn btn-primary btn-full" onclick="UI.saveTournamentNames()">Salvar nomes corrigidos</button>
+      </div>
       ${editable?`<div class="bracket-tool-actions">
         <button class="btn btn-ghost btn-sm" onclick="UI.randomizeTournamentRound(${ri})">🎲 Sorteio automático</button>
         <button class="btn btn-ghost btn-sm" onclick="UI.smartArrangeTournament(${ri})">✨ Organização inteligente</button>
@@ -1246,6 +1255,23 @@ const UI = (() => {
   const toggleTournamentAvailability = async teamId => {
     if(!Storage.isAdmin())return;const team=Tournament.getBracket()?.teams?.find(t=>t.id===teamId);if(!team)return;
     await saveBracketChange(Tournament.setAvailability(teamId,team.available===false),`Status de ${team.name} atualizado`);
+  };
+  const toggleTournamentNamesEditor = () => $('tournament-names-editor')?.classList.toggle('hidden');
+  const saveTournamentNames = async () => {
+    if(!Storage.isAdmin())return;
+    const bracket=Tournament.getBracket(),teamSize=Number(bracket?.teamSize)||1;
+    const updates=[...document.querySelectorAll('.tournament-name-edit-row')].map(row=>({
+      id:row.dataset.teamId,
+      name:row.querySelector('.tournament-edit-team-name').value.trim(),
+      members:row.querySelector('.tournament-edit-members').value.split(',').map(name=>name.trim()).filter(Boolean),
+    }));
+    if(updates.some(update=>!update.name)){toast('⚠️ Informe o nome de todas as equipes','warn');return;}
+    if(updates.some(update=>update.members.length!==teamSize)){toast(`⚠️ Cada equipe precisa ter exatamente ${teamSize} ${teamSize===1?'jogador':'jogadores'}`,'warn');return;}
+    const teamNames=updates.map(update=>update.name.toLocaleLowerCase('pt-BR'));
+    const playerNames=updates.flatMap(update=>update.members).map(name=>name.toLocaleLowerCase('pt-BR'));
+    if(new Set(teamNames).size!==teamNames.length){toast('⚠️ Existem equipes com o mesmo nome','warn');return;}
+    if(new Set(playerNames).size!==playerNames.length){toast('⚠️ Existem jogadores com o mesmo nome','warn');return;}
+    await saveBracketChange(Tournament.updateNames(updates),'✅ Nomes corrigidos no torneio');
   };
   const selectBracketTeam = async (roundIdx,matchIdx,side) => {
     if(!Storage.isAdmin())return;const position={roundIdx,matchIdx,side};
@@ -1598,7 +1624,7 @@ const UI = (() => {
     removePlayer, updateSummary,
     // torneio
     startTournamentManual, startTournamentFromSorteio, pickWinner, openTournamentResult, chooseDirectAdvance, resetTournament,
-    toggleTournamentAvailability, selectBracketTeam, cancelBracketSwap, randomizeTournamentRound, smartArrangeTournament, toggleManualBracketEditor, saveManualBracket,
+    toggleTournamentAvailability, toggleTournamentNamesEditor, saveTournamentNames, selectBracketTeam, cancelBracketSwap, randomizeTournamentRound, smartArrangeTournament, toggleManualBracketEditor, saveManualBracket,
     addTournamentTeam,
     // jogadores
     openProfile, deletePlayer, openRegisterModal, openInviteModal,

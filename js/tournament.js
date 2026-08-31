@@ -61,6 +61,29 @@ const Tournament = (() => {
     (bracket.rounds||[]).forEach(r=>[...(r.matches||[]).flatMap(m=>[m.t1,m.t2]),...(r.carried||[])].forEach(t=>{if(t?.id===teamId)t.available=!!available;}));
     return bracket;
   };
+  const updateNames = updates => {
+    if(!bracket||!Array.isArray(updates))return null;
+    const byId=new Map(updates.map(update=>[update.id,update]));
+    const playerRenames=new Map();
+    (bracket.teams||[]).forEach(team=>{
+      const update=byId.get(team.id);if(!update)return;
+      (team.members||[]).forEach((oldName,index)=>playerRenames.set(_playerKey(oldName),update.members[index]));
+      team.name=update.name;team.members=[...update.members];
+    });
+    const syncTeam=team=>{const update=byId.get(team?.id);if(update){team.name=update.name;team.members=[...update.members];}};
+    (bracket.rounds||[]).forEach(round=>{
+      (round.matches||[]).forEach(match=>{
+        syncTeam(match.t1);syncTeam(match.t2);syncTeam(match.winner);
+        if(match.result){
+          (match.result.kills||[]).forEach(entry=>{entry.player=playerRenames.get(_playerKey(entry.player))||entry.player;});
+          match.result.mvps=(match.result.mvps||[]).map(name=>playerRenames.get(_playerKey(name))||name);
+        }
+      });
+      (round.carried||[]).forEach(syncTeam);syncTeam(round.directAdvance);
+    });
+    syncTeam(bracket.champion);
+    return bracket;
+  };
   const swapTeams = (a,b,{lock=true}={}) => {
     if(!_editable(a)||!_editable(b))return null;const ma=bracket.rounds[a.roundIdx].matches[a.matchIdx],mb=bracket.rounds[b.roundIdx].matches[b.matchIdx];
     const ta=ma[a.side],tb=mb[b.side];if(!ta||!tb)return null;ma[a.side]=tb;mb[b.side]=ta;
@@ -117,5 +140,5 @@ const Tournament = (() => {
     const maxKills=ranking[0]?.kills??0,maxMvps=Math.max(0,...ranking.map(p=>p.mvps));
     return {ranking,matchMvps,topKillers:ranking.filter(p=>p.kills===maxKills&&maxKills>0),overallMvps:ranking.filter(p=>p.mvps===maxMvps&&maxMvps>0)};
   };
-  return {create,load,reset,setWinner,setResult,setDirectAdvance,setAvailability,swapTeams,setRoundOrder,arrangeSmart,randomizeRound,render,getStats,getBracket:()=>bracket};
+  return {create,load,reset,setWinner,setResult,setDirectAdvance,setAvailability,updateNames,swapTeams,setRoundOrder,arrangeSmart,randomizeRound,render,getStats,getBracket:()=>bracket};
 })();

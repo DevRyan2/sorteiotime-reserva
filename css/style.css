@@ -365,6 +365,10 @@ input.invite-link-out { background:rgba(0,0,0,0.5);border:1px solid rgba(37,211,
 .match-slot-editable { cursor:pointer; }.match-slot-editable:hover { background:rgba(37,211,102,.12); }.team-availability { flex:0 0 auto;font-size:9px; }
 .match-manual { border-color:rgba(251,191,36,.32); }.manual-match-label { padding:4px 8px;border-top:1px solid rgba(251,191,36,.18);color:#fbbf24;background:rgba(251,191,36,.06);font-size:8px;text-align:center;text-transform:uppercase;letter-spacing:.5px; }
 .manual-bracket-editor { margin-top:12px;padding:12px;border:1px solid var(--border2);border-radius:12px;background:rgba(0,0,0,.18); }
+.tournament-names-editor { margin-top:12px;padding:14px;border:1px solid var(--border2);border-radius:12px;background:rgba(0,0,0,.18); }
+.tournament-name-edit-row { display:grid;grid-template-columns:minmax(150px,.7fr) minmax(220px,1.3fr);gap:10px;margin:10px 0; }
+.tournament-name-edit-row label>span { display:block;margin-bottom:5px;color:var(--muted);font-size:9px;text-transform:uppercase; }
+.tournament-names-editor>.btn { margin-top:12px; }
 .manual-bracket-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:12px; }.manual-bracket-grid label>span { display:block;margin-bottom:5px;color:var(--muted);font-size:9px;text-transform:uppercase; }.manual-bracket-grid select { width:100%; }
 
 /* ── Confirmação de sessão ──────────────────────────────────────────────── */
@@ -407,6 +411,7 @@ input.invite-link-out { background:rgba(0,0,0,0.5);border:1px solid rgba(37,211,
   .team-editor-head { flex-direction:column; }
   .tournament-team-editor { grid-template-columns:1fr; }
   .manual-bracket-grid { grid-template-columns:1fr; }
+  .tournament-name-edit-row { grid-template-columns:1fr; }
   .tournament-result-grid,.tournament-live-stats { grid-template-columns:1fr; }
   .bracket-wrap { --connector:28px; }
   .bracket-col { min-width:215px; }
