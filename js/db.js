@@ -166,6 +166,8 @@ const DB = (() => {
     Storage.setMyNick(valid.nick); return { ...current,nick:valid.nick,nickKey:valid.key };
   };
 
+  const updateMyProfile=async({bio,avatar})=>{if(_usingFallback)throw new Error('Personalização exige Firebase.');const user=firebase.auth().currentUser,current=await getMyProfile();if(!user?.isAnonymous||!current||current.ownerUid!==user.uid)throw new Error('Este perfil não está vinculado a este dispositivo.');const cleanBio=String(bio||'').trim().replace(/\s+/g,' ').slice(0,160);if(/[<>`]/.test(cleanBio))throw new Error('A bio contém caracteres não permitidos.');if(avatar!==null&&avatar!==undefined&&(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar)||avatar.length>180000))throw new Error('Imagem inválida ou muito grande.');const updates={bio:cleanBio||null};if(avatar!==undefined)updates.avatar=avatar||null;await _db.ref(`players/${current.id}`).update(updates);return {...current,...updates};};
+
   const getPlayerIdByNick = nick => Object.entries(_playersById).find(([,p]) => p.nick?.toLocaleLowerCase('pt-BR') === String(nick).toLocaleLowerCase('pt-BR'))?.[0] || null;
   const getPlayerById = id => _playersById[id] ? { ..._playersById[id],id,adjustments:_statAdjustments[id]||{} } : null;
 
@@ -378,7 +380,7 @@ const DB = (() => {
     addConfirmed, replaceConfirmed, removeConfirmed,
     deletePlayer, savePlayerAdmin, getPlayerById,
     finalizeSession, deleteOfficialMatch, correctOfficialMatch,
-    validateNick, createMyProfile, changeMyNick, getMyProfile, getPlayerIdByNick, signInStaff,
+    validateNick, createMyProfile, changeMyNick, updateMyProfile, getMyProfile, getPlayerIdByNick, signInStaff,
     setAdminRole, removeAdminRole, getRoles, getAuditLog, resetPlayerSeason, startNewSeason,
     getTournament, saveTournament, clearTournament,
   };

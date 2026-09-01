@@ -190,14 +190,15 @@ const Players = (() => {
     const isOwnProfile = Storage.getMyNick().toLocaleLowerCase('pt-BR') === nick.toLocaleLowerCase('pt-BR');
     return `
       <div class="profile-header">
-        <div class="profile-avatar">${nick.charAt(0).toUpperCase()}</div>
+        <div class="profile-avatar">${p.avatar ? `<img src="${esc(p.avatar)}" alt="Foto de ${esc(nick)}">` : nick.charAt(0).toUpperCase()}</div>
         <div class="profile-info">
           <div class="profile-nick">${esc(nick)}</div>
           <div class="profile-rank rank-tag">${p.rank || 'Bronze'}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">${p.points||0} pontos</div>
+          ${p.bio ? `<div class="profile-bio">${esc(p.bio)}</div>` : ''}
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-          ${isOwnProfile ? `<button class="btn btn-ghost btn-sm" onclick="UI.promptEditNick()">✏️ Trocar perfil</button>` : ''}
+          ${isOwnProfile ? `<button class="btn btn-ghost btn-sm" onclick="UI.openCustomizeProfile()">🎨 Personalizar</button><button class="btn btn-ghost btn-sm" onclick="UI.promptEditNick()">✏️ Trocar nick</button>` : ''}
           ${adminDeleteBtn}
           <button class="btn btn-ghost btn-sm" onclick="UI.closePlayerProfile()">← Voltar</button>
         </div>

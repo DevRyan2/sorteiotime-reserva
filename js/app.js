@@ -963,7 +963,7 @@ const UI = (() => {
                 const stats = Players.getStats(p.nick);
                 const wrColor = stats.winrate >= 60 ? 'var(--green)' : stats.winrate >= 40 ? 'var(--accent)' : 'var(--red)';
                 return `<div class="player-row" onclick="UI.openProfile(decodeURIComponent('${encodeURIComponent(p.nick)}'))">
-                  <div class="player-avatar">${p.nick.charAt(0).toUpperCase()}</div>
+                  <div class="player-avatar">${p.avatar?`<img src="${escapeHTML(p.avatar)}" alt="Foto de ${escapeHTML(p.nick)}">`:p.nick.charAt(0).toUpperCase()}</div>
                   <div class="player-row-info">
                     <div class="player-row-nick">${escapeHTML(p.nick)}</div>
                     <div class="player-row-rank">${p.rank || 'Bronze'}</div>
@@ -993,6 +993,14 @@ const UI = (() => {
   };
 
   const closePlayerProfile = () => { profileNick=null;renderJogadoresTab(); };
+
+  let customizeAvatar;
+  const setCustomizePreview=(avatar,nick='?')=>{const preview=$('profile-photo-preview');if(preview)preview.innerHTML=avatar?`<img src="${escapeHTML(avatar)}" alt="Prévia da foto">`:escapeHTML((nick||'?').charAt(0).toUpperCase());};
+  const openCustomizeProfile=async()=>{try{const profile=await DB.getMyProfile();if(!profile)throw new Error('Este perfil não está vinculado a este dispositivo.');customizeAvatar=undefined;$('profile-bio-input').value=profile.bio||'';$('profile-bio-count').textContent=String((profile.bio||'').length);$('profile-customize-error')?.classList.add('hidden');setCustomizePreview(profile.avatar,profile.nick);$('modal-customize-profile')?.classList.remove('hidden');}catch(e){toast('❌ '+e.message,'err');}};
+  const closeCustomizeProfile=()=>{$('modal-customize-profile')?.classList.add('hidden');const input=$('profile-photo-input');if(input)input.value='';customizeAvatar=undefined;};
+  const compressProfilePhoto=async file=>{if(!/^image\/(jpeg|png|webp)$/.test(file.type)||file.size>10*1024*1024)throw new Error('Escolha uma imagem JPG, PNG ou WebP de até 10 MB.');const bitmap=await createImageBitmap(file),max=320,scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));const ctx=canvas.getContext('2d');ctx.fillStyle='#08130c';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();let quality=.82,data=canvas.toDataURL('image/jpeg',quality);while(data.length>180000&&quality>.42){quality-=.1;data=canvas.toDataURL('image/jpeg',quality);}if(data.length>180000)throw new Error('Não foi possível reduzir essa imagem. Escolha uma foto menor.');return data;};
+  const handleProfilePhoto=async e=>{const file=e.target.files?.[0];if(!file)return;try{customizeAvatar=await compressProfilePhoto(file);setCustomizePreview(customizeAvatar);}catch(err){toast('❌ '+err.message,'err');e.target.value='';}};
+  const saveCustomizeProfile=async()=>{const button=$('profile-customize-save');if(button){button.disabled=true;button.textContent='Salvando…';}try{await DB.updateMyProfile({bio:$('profile-bio-input')?.value||'',avatar:customizeAvatar});closeCustomizeProfile();toast('✅ Perfil personalizado');if(profileNick)renderJogadoresTab();if(activeTab==='perfil')renderPerfilTab();}catch(e){const error=$('profile-customize-error');if(error){error.textContent=e.message;error.classList.remove('hidden');}}finally{if(button){button.disabled=false;button.textContent='Salvar perfil';}}};
 
   let adminPlayerId=null;
   const openPlayerAdmin = nick => {
@@ -1619,6 +1627,13 @@ const UI = (() => {
     $('btn-delete-player')?.addEventListener('click',deletePlayerAdmin);
     $('btn-reset-player')?.addEventListener('click',resetPlayerAdmin);
     $('modal-player-admin')?.addEventListener('click',e=>{if(e.target===$('modal-player-admin'))closePlayerAdmin();});
+    $('customize-profile-close')?.addEventListener('click',closeCustomizeProfile);
+    $('profile-customize-cancel')?.addEventListener('click',closeCustomizeProfile);
+    $('profile-customize-save')?.addEventListener('click',saveCustomizeProfile);
+    $('profile-photo-input')?.addEventListener('change',handleProfilePhoto);
+    $('profile-photo-remove')?.addEventListener('click',()=>{customizeAvatar=null;setCustomizePreview(null,Storage.getMyNick());});
+    $('profile-bio-input')?.addEventListener('input',e=>{if($('profile-bio-count'))$('profile-bio-count').textContent=String(e.target.value.length);});
+    $('modal-customize-profile')?.addEventListener('click',e=>{if(e.target===$('modal-customize-profile'))closeCustomizeProfile();});
 
     // ── Modal: Finalizar partida ───────────────────────────────────────────
     $('modal-finish-close')?.addEventListener('click',  () => $('modal-finish-match')?.classList.add('hidden'));
@@ -1676,7 +1691,7 @@ const UI = (() => {
     toggleTournamentAvailability, toggleTournamentNamesEditor, saveTournamentNames, selectBracketTeam, cancelBracketSwap, randomizeTournamentRound, smartArrangeTournament, toggleManualBracketEditor, saveManualBracket,
     addTournamentTeam,
     // jogadores
-    openProfile, closePlayerProfile, openPlayerAdmin, deletePlayer, openRegisterModal, openInviteModal, downloadPlayerCard, sharePlayerCard,
+    openProfile, closePlayerProfile, openCustomizeProfile, openPlayerAdmin, deletePlayer, openRegisterModal, openInviteModal, downloadPlayerCard, sharePlayerCard,
     grantAdmin,revokeAdmin,startNewSeason,deleteOfficialMatch,openCorrectMatch,copyMyAdminCode,
     closeRegisterModal, closeInviteModal, doRegister, generateInviteLink,
     // partidas

@@ -12,6 +12,8 @@
         "nickKey": { ".validate": "newData.isString()" },
         "ownerUid": { ".validate": "newData.isString()" },
         "createdAt": { ".validate": "newData.isNumber()" },
+        "bio": { ".validate": "newData.isString() && newData.val().length <= 160" },
+        "avatar": { ".validate": "newData.isString() && newData.val().length <= 180000 && newData.val().matches(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/)" },
         "$other": { ".validate": false }
       }
     },

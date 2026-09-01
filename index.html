@@ -805,6 +805,17 @@
         <!-- /wrap -->
 
         <!-- Modal: gerenciamento administrativo de jogador -->
+        <div class="modal-backdrop hidden" id="modal-customize-profile">
+            <div class="modal-box" style="max-width:500px" role="dialog" aria-modal="true" aria-labelledby="customize-profile-title">
+                <div class="modal-head"><div class="modal-title" id="customize-profile-title">🎨 Personalizar perfil</div><button class="modal-close" id="customize-profile-close" aria-label="Fechar">✕</button></div>
+                <div class="profile-photo-editor"><div class="profile-photo-preview" id="profile-photo-preview">?</div><div><label class="btn btn-secondary btn-sm" for="profile-photo-input">Escolher da galeria</label><input id="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" hidden><button class="btn btn-ghost btn-sm" id="profile-photo-remove" type="button">Remover foto</button><p class="hint">JPG, PNG ou WebP. A imagem será comprimida automaticamente.</p></div></div>
+                <div class="modal-field-group"><label class="field-label" for="profile-bio-input">Bio</label><textarea class="field-full" id="profile-bio-input" maxlength="160" rows="4" placeholder="Conte um pouco sobre você…"></textarea><div class="hint"><span id="profile-bio-count">0</span>/160</div></div>
+                <p class="field-error hidden" id="profile-customize-error"></p>
+                <div class="btn-bar"><button class="btn btn-secondary" id="profile-customize-cancel">Cancelar</button><button class="btn btn-primary" id="profile-customize-save">Salvar perfil</button></div>
+            </div>
+        </div>
+
+        <!-- Modal: gerenciamento administrativo de jogador -->
         <div class="modal-backdrop hidden" id="modal-player-admin">
             <div class="modal-box" style="max-width: 560px" role="dialog" aria-modal="true" aria-labelledby="player-admin-title">
                 <div class="modal-head">
