@@ -1,0 +1,904 @@
+{
+  "players": {
+    "0cdf9830-cc23-4fcc-a8b9-18377f8b32c1": {
+      "id": "0cdf9830-cc23-4fcc-a8b9-18377f8b32c1",
+      "nick": "brian",
+      "nickKey": "brian",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "eea9f87e-cafe-463c-8ed9-6e2d729af3cd": {
+      "id": "eea9f87e-cafe-463c-8ed9-6e2d729af3cd",
+      "nick": "gl",
+      "nickKey": "gl",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "ba016669-6e8f-417f-99b6-ca00793231f5": {
+      "id": "ba016669-6e8f-417f-99b6-ca00793231f5",
+      "nick": "god",
+      "nickKey": "god",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "3429b110-57ad-4b07-9f28-3f6726afe8de": {
+      "id": "3429b110-57ad-4b07-9f28-3f6726afe8de",
+      "nick": "gustavo",
+      "nickKey": "gustavo",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "b641fb8e-dbe2-4272-be02-2aa3a66a5c1e": {
+      "id": "b641fb8e-dbe2-4272-be02-2aa3a66a5c1e",
+      "nick": "havex",
+      "nickKey": "havex",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "e76bd879-d625-4056-94ec-d2af8b97519f": {
+      "id": "e76bd879-d625-4056-94ec-d2af8b97519f",
+      "nick": "henrique",
+      "nickKey": "henrique",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "368ebc24-516a-40ad-b1eb-bc33ce82daaa": {
+      "id": "368ebc24-516a-40ad-b1eb-bc33ce82daaa",
+      "nick": "jhon",
+      "nickKey": "jhon",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "e276b283-0f65-44ab-96f4-5aaa6042f0c1": {
+      "id": "e276b283-0f65-44ab-96f4-5aaa6042f0c1",
+      "nick": "lk",
+      "nickKey": "lk",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "7343da53-e785-4ca9-ba2d-385489a2fea0": {
+      "id": "7343da53-e785-4ca9-ba2d-385489a2fea0",
+      "nick": "luan",
+      "nickKey": "luan",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "7ef92339-5bac-4c26-8a58-d0a23a20e5f9": {
+      "id": "7ef92339-5bac-4c26-8a58-d0a23a20e5f9",
+      "nick": "may",
+      "nickKey": "may",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "e74b0408-5362-45e8-87fa-db1cb6d52092": {
+      "id": "e74b0408-5362-45e8-87fa-db1cb6d52092",
+      "nick": "mendes",
+      "nickKey": "mendes",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "9404b7e9-dc1b-4e48-9dfb-3121f8f78ff4": {
+      "id": "9404b7e9-dc1b-4e48-9dfb-3121f8f78ff4",
+      "nick": "mery",
+      "nickKey": "mery",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "5bac773f-fadc-4a95-abd6-7111b0d42aa4": {
+      "id": "5bac773f-fadc-4a95-abd6-7111b0d42aa4",
+      "nick": "nana",
+      "nickKey": "nana",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "2bc27af7-fc54-455a-b94c-f74f0690ab5b": {
+      "id": "2bc27af7-fc54-455a-b94c-f74f0690ab5b",
+      "nick": "rc",
+      "nickKey": "rc",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "2a12ecd9-ac75-4171-b141-15b56f39910a": {
+      "id": "2a12ecd9-ac75-4171-b141-15b56f39910a",
+      "nick": "samuel",
+      "nickKey": "samuel",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "5f73c62b-61f9-4f94-a1fb-1897b3b56a01": {
+      "id": "5f73c62b-61f9-4f94-a1fb-1897b3b56a01",
+      "nick": "wyzz",
+      "nickKey": "wyzz",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788130014149
+    },
+    "3a4281e5-76e9-4397-8ef8-40e8bbc8ff71": {
+      "id": "3a4281e5-76e9-4397-8ef8-40e8bbc8ff71",
+      "nick": "rc7",
+      "nickKey": "rc7",
+      "ownerUid": "RECOVERY_UNCLAIMED",
+      "createdAt": 1788220000000
+    }
+  },
+  "nickClaims": {
+    "brian": "0cdf9830-cc23-4fcc-a8b9-18377f8b32c1",
+    "gl": "eea9f87e-cafe-463c-8ed9-6e2d729af3cd",
+    "god": "ba016669-6e8f-417f-99b6-ca00793231f5",
+    "gustavo": "3429b110-57ad-4b07-9f28-3f6726afe8de",
+    "havex": "b641fb8e-dbe2-4272-be02-2aa3a66a5c1e",
+    "henrique": "e76bd879-d625-4056-94ec-d2af8b97519f",
+    "jhon": "368ebc24-516a-40ad-b1eb-bc33ce82daaa",
+    "lk": "e276b283-0f65-44ab-96f4-5aaa6042f0c1",
+    "luan": "7343da53-e785-4ca9-ba2d-385489a2fea0",
+    "may": "7ef92339-5bac-4c26-8a58-d0a23a20e5f9",
+    "mendes": "e74b0408-5362-45e8-87fa-db1cb6d52092",
+    "mery": "9404b7e9-dc1b-4e48-9dfb-3121f8f78ff4",
+    "nana": "5bac773f-fadc-4a95-abd6-7111b0d42aa4",
+    "rc": "2bc27af7-fc54-455a-b94c-f74f0690ab5b",
+    "samuel": "2a12ecd9-ac75-4171-b141-15b56f39910a",
+    "wyzz": "5f73c62b-61f9-4f94-a1fb-1897b3b56a01",
+    "rc7": "3a4281e5-76e9-4397-8ef8-40e8bbc8ff71"
+  },
+  "matches": {
+    "3df871fc-7966-46bf-9ea5-9f06b57d8f92": {
+      "id": "3df871fc-7966-46bf-9ea5-9f06b57d8f92",
+      "sessionId": "recovered-tournament-r0-m0",
+      "eventName": "Quartas de final — partida 1",
+      "teams": [
+        [
+          "nana",
+          "samuel"
+        ],
+        [
+          "jhon",
+          "may"
+        ]
+      ],
+      "winner": 1,
+      "mvp": "jhon",
+      "playerResults": {
+        "5bac773f-fadc-4a95-abd6-7111b0d42aa4": {
+          "playerId": "5bac773f-fadc-4a95-abd6-7111b0d42aa4",
+          "nick": "nana",
+          "kills": 3,
+          "won": false,
+          "mvp": false
+        },
+        "2a12ecd9-ac75-4171-b141-15b56f39910a": {
+          "playerId": "2a12ecd9-ac75-4171-b141-15b56f39910a",
+          "nick": "samuel",
+          "kills": 2,
+          "won": false,
+          "mvp": false
+        },
+        "368ebc24-516a-40ad-b1eb-bc33ce82daaa": {
+          "playerId": "368ebc24-516a-40ad-b1eb-bc33ce82daaa",
+          "nick": "jhon",
+          "kills": 20,
+          "won": true,
+          "mvp": true
+        },
+        "7ef92339-5bac-4c26-8a58-d0a23a20e5f9": {
+          "playerId": "7ef92339-5bac-4c26-8a58-d0a23a20e5f9",
+          "nick": "may",
+          "kills": 9,
+          "won": true,
+          "mvp": false
+        }
+      },
+      "date": 1788133623662,
+      "createdAt": 1788133623662,
+      "season": "2026-08",
+      "finalizedBy": "RECOVERY_IMPORT",
+      "status": "finalized"
+    },
+    "105eb0d4-6857-46de-b675-baa1a9cb50de": {
+      "id": "105eb0d4-6857-46de-b675-baa1a9cb50de",
+      "sessionId": "recovered-tournament-r0-m1",
+      "eventName": "Quartas de final — partida 2",
+      "teams": [
+        [
+          "rc",
+          "henrique"
+        ],
+        [
+          "mery",
+          "luan"
+        ]
+      ],
+      "winner": 0,
+      "mvp": "rc",
+      "playerResults": {
+        "2bc27af7-fc54-455a-b94c-f74f0690ab5b": {
+          "playerId": "2bc27af7-fc54-455a-b94c-f74f0690ab5b",
+          "nick": "rc",
+          "kills": 15,
+          "won": true,
+          "mvp": true
+        },
+        "e76bd879-d625-4056-94ec-d2af8b97519f": {
+          "playerId": "e76bd879-d625-4056-94ec-d2af8b97519f",
+          "nick": "henrique",
+          "kills": 14,
+          "won": true,
+          "mvp": false
+        },
+        "9404b7e9-dc1b-4e48-9dfb-3121f8f78ff4": {
+          "playerId": "9404b7e9-dc1b-4e48-9dfb-3121f8f78ff4",
+          "nick": "mery",
+          "kills": 6,
+          "won": false,
+          "mvp": false
+        },
+        "7343da53-e785-4ca9-ba2d-385489a2fea0": {
+          "playerId": "7343da53-e785-4ca9-ba2d-385489a2fea0",
+          "nick": "luan",
+          "kills": 0,
+          "won": false,
+          "mvp": false
+        }
+      },
+      "date": 1788135893571,
+      "createdAt": 1788135893571,
+      "season": "2026-08",
+      "finalizedBy": "RECOVERY_IMPORT",
+      "status": "finalized"
+    },
+    "f721df56-ae43-4bcb-9572-520e230f721e": {
+      "id": "f721df56-ae43-4bcb-9572-520e230f721e",
+      "sessionId": "recovered-tournament-r0-m2",
+      "eventName": "Quartas de final — partida 3",
+      "teams": [
+        [
+          "mendes",
+          "gl"
+        ],
+        [
+          "havex",
+          "brian"
+        ]
+      ],
+      "winner": 1,
+      "mvp": "brian",
+      "playerResults": {
+        "e74b0408-5362-45e8-87fa-db1cb6d52092": {
+          "playerId": "e74b0408-5362-45e8-87fa-db1cb6d52092",
+          "nick": "mendes",
+          "kills": 6,
+          "won": false,
+          "mvp": false
+        },
+        "eea9f87e-cafe-463c-8ed9-6e2d729af3cd": {
+          "playerId": "eea9f87e-cafe-463c-8ed9-6e2d729af3cd",
+          "nick": "gl",
+          "kills": 11,
+          "won": false,
+          "mvp": false
+        },
+        "b641fb8e-dbe2-4272-be02-2aa3a66a5c1e": {
+          "playerId": "b641fb8e-dbe2-4272-be02-2aa3a66a5c1e",
+          "nick": "havex",
+          "kills": 7,
+          "won": true,
+          "mvp": false
+        },
+        "0cdf9830-cc23-4fcc-a8b9-18377f8b32c1": {
+          "playerId": "0cdf9830-cc23-4fcc-a8b9-18377f8b32c1",
+          "nick": "brian",
+          "kills": 21,
+          "won": true,
+          "mvp": true
+        }
+      },
+      "date": 1788139916651,
+      "createdAt": 1788139916651,
+      "season": "2026-08",
+      "finalizedBy": "RECOVERY_IMPORT",
+      "status": "finalized"
+    },
+    "97760a2c-3699-47ef-b0f1-38f58fc60f20": {
+      "id": "97760a2c-3699-47ef-b0f1-38f58fc60f20",
+      "sessionId": "recovered-tournament-r0-m3",
+      "eventName": "Quartas de final — partida 4",
+      "teams": [
+        [
+          "lk",
+          "wyzz"
+        ],
+        [
+          "god",
+          "gustavo"
+        ]
+      ],
+      "winner": 1,
+      "mvp": "gustavo",
+      "playerResults": {
+        "e276b283-0f65-44ab-96f4-5aaa6042f0c1": {
+          "playerId": "e276b283-0f65-44ab-96f4-5aaa6042f0c1",
+          "nick": "lk",
+          "kills": 8,
+          "won": false,
+          "mvp": false
+        },
+        "5f73c62b-61f9-4f94-a1fb-1897b3b56a01": {
+          "playerId": "5f73c62b-61f9-4f94-a1fb-1897b3b56a01",
+          "nick": "wyzz",
+          "kills": 9,
+          "won": false,
+          "mvp": false
+        },
+        "ba016669-6e8f-417f-99b6-ca00793231f5": {
+          "playerId": "ba016669-6e8f-417f-99b6-ca00793231f5",
+          "nick": "god",
+          "kills": 13,
+          "won": true,
+          "mvp": false
+        },
+        "3429b110-57ad-4b07-9f28-3f6726afe8de": {
+          "playerId": "3429b110-57ad-4b07-9f28-3f6726afe8de",
+          "nick": "gustavo",
+          "kills": 17,
+          "won": true,
+          "mvp": true
+        }
+      },
+      "date": 1788143881416,
+      "createdAt": 1788143881416,
+      "season": "2026-08",
+      "finalizedBy": "RECOVERY_IMPORT",
+      "status": "finalized"
+    },
+    "62d56538-a23d-401f-8ef1-41e8fd2eb9cd": {
+      "id": "62d56538-a23d-401f-8ef1-41e8fd2eb9cd",
+      "sessionId": "recovered-tournament-r1-m0",
+      "eventName": "Semifinal — partida 1",
+      "teams": [
+        [
+          "rc",
+          "henrique"
+        ],
+        [
+          "jhon",
+          "may"
+        ]
+      ],
+      "winner": 1,
+      "mvp": "jhon",
+      "playerResults": {
+        "2bc27af7-fc54-455a-b94c-f74f0690ab5b": {
+          "playerId": "2bc27af7-fc54-455a-b94c-f74f0690ab5b",
+          "nick": "rc",
+          "kills": 7,
+          "won": false,
+          "mvp": false
+        },
+        "e76bd879-d625-4056-94ec-d2af8b97519f": {
+          "playerId": "e76bd879-d625-4056-94ec-d2af8b97519f",
+          "nick": "henrique",
+          "kills": 10,
+          "won": false,
+          "mvp": false
+        },
+        "368ebc24-516a-40ad-b1eb-bc33ce82daaa": {
+          "playerId": "368ebc24-516a-40ad-b1eb-bc33ce82daaa",
+          "nick": "jhon",
+          "kills": 18,
+          "won": true,
+          "mvp": true
+        },
+        "7ef92339-5bac-4c26-8a58-d0a23a20e5f9": {
+          "playerId": "7ef92339-5bac-4c26-8a58-d0a23a20e5f9",
+          "nick": "may",
+          "kills": 13,
+          "won": true,
+          "mvp": false
+        }
+      },
+      "date": 1788146782555,
+      "createdAt": 1788146782555,
+      "season": "2026-08",
+      "finalizedBy": "RECOVERY_IMPORT",
+      "status": "finalized"
+    }
+  },
+  "tournament": {
+    "createdAt": 1788130014149,
+    "format": "Duo",
+    "rounds": [
+      {
+        "awaitingDirectAdvance": false,
+        "id": "round-0-1788130014149",
+        "matches": [
+          {
+            "id": "r0-m0",
+            "result": {
+              "confirmedAt": 1788133623662,
+              "kills": [
+                {
+                  "kills": 3,
+                  "player": "nana"
+                },
+                {
+                  "kills": 2,
+                  "player": "samuel"
+                },
+                {
+                  "kills": 20,
+                  "player": "jhon"
+                },
+                {
+                  "kills": 9,
+                  "player": "may"
+                }
+              ],
+              "mvps": [
+                "jhon"
+              ],
+              "totalKills": 34,
+              "updatedAt": 1788133623663
+            },
+            "t1": {
+              "id": "team-1788130014149-6",
+              "members": [
+                "nana",
+                "samuel"
+              ],
+              "name": "Equipe nana"
+            },
+            "t2": {
+              "id": "team-1788130014149-0",
+              "members": [
+                "jhon",
+                "may"
+              ],
+              "name": "Equipe jhon"
+            },
+            "winner": {
+              "id": "team-1788130014149-0",
+              "members": [
+                "jhon",
+                "may"
+              ],
+              "name": "Equipe jhon"
+            }
+          },
+          {
+            "id": "r0-m1",
+            "result": {
+              "confirmedAt": 1788135893571,
+              "kills": [
+                {
+                  "kills": 15,
+                  "player": "rc"
+                },
+                {
+                  "kills": 14,
+                  "player": "henrique"
+                },
+                {
+                  "kills": 6,
+                  "player": "mery"
+                },
+                {
+                  "kills": 0,
+                  "player": "luan"
+                }
+              ],
+              "mvps": [
+                "rc"
+              ],
+              "totalKills": 35,
+              "updatedAt": 1788135893572
+            },
+            "t1": {
+              "id": "team-1788130014149-1",
+              "members": [
+                "rc",
+                "henrique"
+              ],
+              "name": "Equipe rc"
+            },
+            "t2": {
+              "id": "team-1788130014149-5",
+              "members": [
+                "mery",
+                "luan"
+              ],
+              "name": "Equipe mery"
+            },
+            "winner": {
+              "id": "team-1788130014149-1",
+              "members": [
+                "rc",
+                "henrique"
+              ],
+              "name": "Equipe rc"
+            }
+          },
+          {
+            "id": "r0-m2",
+            "result": {
+              "confirmedAt": 1788139916651,
+              "kills": [
+                {
+                  "kills": 6,
+                  "player": "mendes"
+                },
+                {
+                  "kills": 11,
+                  "player": "gl"
+                },
+                {
+                  "kills": 7,
+                  "player": "havex"
+                },
+                {
+                  "kills": 21,
+                  "player": "brian"
+                }
+              ],
+              "mvps": [
+                "brian"
+              ],
+              "totalKills": 45,
+              "updatedAt": 1788139916651
+            },
+            "t1": {
+              "id": "team-1788130014149-7",
+              "members": [
+                "mendes",
+                "gl"
+              ],
+              "name": "Equipe gl"
+            },
+            "t2": {
+              "id": "team-1788130014149-3",
+              "members": [
+                "havex",
+                "brian"
+              ],
+              "name": "Equipe havex"
+            },
+            "winner": {
+              "id": "team-1788130014149-3",
+              "members": [
+                "havex",
+                "brian"
+              ],
+              "name": "Equipe havex"
+            }
+          },
+          {
+            "id": "r0-m3",
+            "result": {
+              "confirmedAt": 1788143881416,
+              "kills": [
+                {
+                  "kills": 8,
+                  "player": "lk"
+                },
+                {
+                  "kills": 9,
+                  "player": "wyzz"
+                },
+                {
+                  "kills": 13,
+                  "player": "god"
+                },
+                {
+                  "kills": 17,
+                  "player": "gustavo"
+                }
+              ],
+              "mvps": [
+                "gustavo"
+              ],
+              "totalKills": 47,
+              "updatedAt": 1788143881416
+            },
+            "t1": {
+              "available": true,
+              "id": "team-1788130014149-2",
+              "members": [
+                "lk",
+                "wyzz"
+              ],
+              "name": "Equipe lk"
+            },
+            "t2": {
+              "available": true,
+              "id": "team-1788130014149-4",
+              "members": [
+                "god",
+                "gustavo"
+              ],
+              "name": "Equipe gustavo"
+            },
+            "winner": {
+              "available": true,
+              "id": "team-1788130014149-4",
+              "members": [
+                "god",
+                "gustavo"
+              ],
+              "name": "Equipe gustavo"
+            }
+          }
+        ],
+        "name": "Quartas de final",
+        "participants": [
+          {
+            "id": "team-1788130014149-2",
+            "members": [
+              "lk",
+              "gl"
+            ],
+            "name": "Equipe lk"
+          },
+          {
+            "id": "team-1788130014149-3",
+            "members": [
+              "havex",
+              "brian"
+            ],
+            "name": "Equipe havex"
+          },
+          {
+            "id": "team-1788130014149-0",
+            "members": [
+              "jhon",
+              "may"
+            ],
+            "name": "Equipe jhon"
+          },
+          {
+            "id": "team-1788130014149-7",
+            "members": [
+              "lz",
+              "gustavo"
+            ],
+            "name": "Equipe lz"
+          },
+          {
+            "id": "team-1788130014149-4",
+            "members": [
+              "mendes",
+              "icaro"
+            ],
+            "name": "Equipe mendes"
+          },
+          {
+            "id": "team-1788130014149-1",
+            "members": [
+              "rc",
+              "wyzz"
+            ],
+            "name": "Equipe rc"
+          },
+          {
+            "id": "team-1788130014149-6",
+            "members": [
+              "nana",
+              "samuel"
+            ],
+            "name": "Equipe nana"
+          },
+          {
+            "id": "team-1788130014149-5",
+            "members": [
+              "mery",
+              "luan"
+            ],
+            "name": "Equipe mery"
+          }
+        ]
+      },
+      {
+        "awaitingDirectAdvance": false,
+        "id": "round-1-1788143881416",
+        "matches": [
+          {
+            "id": "r1-m0",
+            "result": {
+              "confirmedAt": 1788146782555,
+              "kills": [
+                {
+                  "kills": 7,
+                  "player": "rc"
+                },
+                {
+                  "kills": 10,
+                  "player": "henrique"
+                },
+                {
+                  "kills": 18,
+                  "player": "jhon"
+                },
+                {
+                  "kills": 13,
+                  "player": "may"
+                }
+              ],
+              "mvps": [
+                "jhon"
+              ],
+              "totalKills": 48,
+              "updatedAt": 1788146782556
+            },
+            "t1": {
+              "id": "team-1788130014149-1",
+              "members": [
+                "rc",
+                "henrique"
+              ],
+              "name": "Equipe rc"
+            },
+            "t2": {
+              "id": "team-1788130014149-0",
+              "members": [
+                "jhon",
+                "may"
+              ],
+              "name": "Equipe jhon"
+            },
+            "winner": {
+              "id": "team-1788130014149-0",
+              "members": [
+                "jhon",
+                "may"
+              ],
+              "name": "Equipe jhon"
+            }
+          },
+          {
+            "id": "r1-m1",
+            "t1": {
+              "id": "team-1788130014149-3",
+              "members": [
+                "havex",
+                "brian"
+              ],
+              "name": "Equipe havex"
+            },
+            "t2": {
+              "available": true,
+              "id": "team-1788130014149-4",
+              "members": [
+                "god",
+                "gustavo"
+              ],
+              "name": "Equipe gustavo"
+            }
+          }
+        ],
+        "name": "Semifinal",
+        "participants": [
+          {
+            "available": true,
+            "id": "team-1788130014149-4",
+            "members": [
+              "god",
+              "gustavo"
+            ],
+            "name": "Equipe gustavo"
+          },
+          {
+            "id": "team-1788130014149-0",
+            "members": [
+              "jhon",
+              "may"
+            ],
+            "name": "Equipe jhon"
+          },
+          {
+            "id": "team-1788130014149-1",
+            "members": [
+              "rc",
+              "henrique"
+            ],
+            "name": "Equipe rc"
+          },
+          {
+            "id": "team-1788130014149-3",
+            "members": [
+              "havex",
+              "brian"
+            ],
+            "name": "Equipe havex"
+          }
+        ]
+      }
+    ],
+    "teamSize": 2,
+    "teams": [
+      {
+        "available": true,
+        "id": "team-1788130014149-0",
+        "members": [
+          "jhon",
+          "may"
+        ],
+        "name": "Equipe jhon"
+      },
+      {
+        "available": true,
+        "id": "team-1788130014149-1",
+        "members": [
+          "rc",
+          "henrique"
+        ],
+        "name": "Equipe rc"
+      },
+      {
+        "available": true,
+        "id": "team-1788130014149-2",
+        "members": [
+          "lk",
+          "wyzz"
+        ],
+        "name": "Equipe lk"
+      },
+      {
+        "available": true,
+        "id": "team-1788130014149-3",
+        "members": [
+          "havex",
+          "brian"
+        ],
+        "name": "Equipe havex"
+      },
+      {
+        "available": true,
+        "id": "team-1788130014149-4",
+        "members": [
+          "god",
+          "gustavo"
+        ],
+        "name": "Equipe gustavo"
+      },
+      {
+        "available": true,
+        "id": "team-1788130014149-5",
+        "members": [
+          "mery",
+          "luan"
+        ],
+        "name": "Equipe mery"
+      },
+      {
+        "available": true,
+        "id": "team-1788130014149-6",
+        "members": [
+          "nana",
+          "samuel"
+        ],
+        "name": "Equipe nana"
+      },
+      {
+        "available": true,
+        "id": "team-1788130014149-7",
+        "members": [
+          "mendes",
+          "gl"
+        ],
+        "name": "Equipe gl"
+      }
+    ],
+    "version": 4
+  },
+  "roles": {
+    "VhKsNQYPCVaHi7gPy4Mg3aoePXb2": {
+      "role": "owner",
+      "label": "Dono",
+      "updatedAt": 0
+    }
+  },
+  "seasons": {
+    "current": {
+      "id": "2026-08",
+      "number": 1,
+      "name": "Temporada recuperada",
+      "startedAt": 1788130014149
+    }
+  }
+}

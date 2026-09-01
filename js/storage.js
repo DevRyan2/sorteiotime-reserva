@@ -127,8 +127,12 @@ const Storage = (() => {
   };
 
   // ── Admin ─────────────────────────────────────────────────────────────────
-  const isAdmin  = ()  => sessionStorage.getItem(K.IS_ADMIN) === 'true';
-  const setAdmin = (v) => v ? sessionStorage.setItem(K.IS_ADMIN, 'true') : sessionStorage.removeItem(K.IS_ADMIN);
+  let runtimeRole='player';
+  const getRole=()=>runtimeRole;
+  const isAdmin=()=>runtimeRole==='admin'||runtimeRole==='owner';
+  const isOwner=()=>runtimeRole==='owner';
+  const setRole=role=>{runtimeRole=['player','admin','owner'].includes(role)?role:'player';};
+  const setAdmin=v=>setRole(v?'admin':'player');
 
   // ── Nick persistente do usuário ───────────────────────────────────────
   // Guardamos o nick que o dispositivo usou para confirmar presença pela
@@ -137,19 +141,6 @@ const Storage = (() => {
   const setMyNick        = (n) => set('ff_my_nick', n);
   const getNickEdits     = () => get('ff_my_nick_edits') || 0;
   const incrementNickEdits = () => set('ff_my_nick_edits', getNickEdits() + 1);
-
-  const authenticateAdmin = async pw => {
-    if (typeof pw !== 'string' || !window.firebase?.auth) return false;
-    try {
-      const adminEmail=window.FIREBASE_CONFIG?.adminEmail;
-      if(!adminEmail) return false;
-      const credential=await firebase.auth().signInWithEmailAndPassword(adminEmail,pw);
-      const token=await credential.user.getIdTokenResult(true);
-      const authorized=token.claims.email===adminEmail;
-      if(!authorized) await firebase.auth().signOut();
-      setAdmin(authorized); return authorized;
-    } catch { setAdmin(false); return false; }
-  };
 
   // ── Scoring Configuration ─────────────────────────────────────────────────
   const getScoringConfig  = () => JSON.parse(JSON.stringify(DEFAULT_SCORING));
@@ -174,7 +165,7 @@ const Storage = (() => {
     getSessions, addSession, updateSession, deleteSession,
     addConfirmed, replaceConfirmed, removeConfirmed,
     getMyConfirmation, setMyConfirmation,
-    isAdmin, setAdmin, authenticateAdmin,
+    isAdmin, isOwner, getRole, setRole, setAdmin,
     getMyNick, setMyNick, getNickEdits, incrementNickEdits,
     getScoringConfig, setScoringConfig, calculateRank,
     getCurrentSeason,

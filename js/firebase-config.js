@@ -16,7 +16,6 @@ window.FIREBASE_CONFIG = {
   storageBucket:     "ff-squad-manager.firebasestorage.app",
   messagingSenderId: "567128938029",
   appId:             "1:567128938029:web:8480c809603289d9094aa4",
-  adminEmail:        "painel@sorteiotime.app",
   syncStats:         true,
 };
 

@@ -1,7 +1,7 @@
 // db.js — camada de dados em tempo real (Firebase Realtime Database)
 const DB = (() => {
   let _db = null, _ready = false, _usingFallback = false;
-  let _cache = {}, _tournamentCache = null, _onChange = null, _playersById = {}, _matchesCache = [], _statAdjustments = {};
+  let _cache = {}, _tournamentCache = null, _onChange = null, _playersById = {}, _matchesCache = [], _statAdjustments = {}, _season=null, _seasonResets={};
 
   const init = () => {
     const cfg = window.FIREBASE_CONFIG;
@@ -15,9 +15,9 @@ const DB = (() => {
       // localStorage nunca é aceito como prova de identidade.
       firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
       firebase.auth().onAuthStateChanged(async user => {
-        const token = user ? await user.getIdTokenResult().catch(()=>null) : null;
-        const admin = token?.claims?.email === cfg.adminEmail;
-        Storage.setAdmin(admin);
+        const role=user?(await _db.ref(`roles/${user.uid}/role`).once('value').catch(()=>({val:()=>null}))).val():'player';
+        Storage.setRole(role||'player');
+        const admin=Storage.isAdmin();
         if (!user) {
           try { await firebase.auth().signInAnonymously(); } catch(e) { console.error('[Auth] Anonymous sign-in:', e); }
         } else if (!admin) {
@@ -64,6 +64,8 @@ const DB = (() => {
           _rebuildPlayerCache();
           if(_onChange)_onChange('players');
         });
+        _db.ref('seasons/current').on('value',snap=>{_season=snap.val()||null;_rebuildPlayerCache();if(_onChange)_onChange('season');});
+        _db.ref('seasonResets').on('value',snap=>{_seasonResets=snap.val()||{};_rebuildPlayerCache();if(_onChange)_onChange('players');});
       }
 
     } catch(e) {
@@ -101,7 +103,8 @@ const DB = (() => {
     const all = {};
     Object.entries(_playersById).forEach(([id,p]) => {
       if (!p?.nick) return;
-      const matches = _matchesCache.flatMap(m => {
+      const seasonId=_season?.id||Storage.getCurrentSeason(), resetAt=Number(_seasonResets[seasonId]?.[id]?.resetAt)||0;
+      const matches = _matchesCache.filter(m=>m.season===seasonId&&(m.date||m.createdAt||0)>=resetAt).flatMap(m => {
         const result = Object.values(m.playerResults || {}).find(r => r.playerId === id);
         return result ? [{ won:!!result.won, mvp:!!result.mvp, kills:Number(result.kills)||0, date:m.date||m.createdAt, matchId:m.id }] : [];
       });
@@ -169,9 +172,9 @@ const DB = (() => {
 
   const _requireAdminAuth = async () => {
     const user = firebase.auth().currentUser;
-    const token = user ? await user.getIdTokenResult(true).catch(()=>null) : null;
-    if (!user || token?.claims?.email !== window.FIREBASE_CONFIG?.adminEmail) {
-      Storage.setAdmin(false);
+    const role=user?(await _db.ref(`roles/${user.uid}/role`).once('value')).val():null;
+    if (!user || (role!=='admin'&&role!=='owner')) {
+      Storage.setRole('player');
       window.dispatchEvent(new CustomEvent('ff-auth-change'));
       throw new Error('A sessão de admin expirou. Entre novamente no painel.');
     }
@@ -179,8 +182,12 @@ const DB = (() => {
     // Atualiza o token antes de operações protegidas. Isso evita que uma
     // troca recente do usuário anônimo para o admin use credenciais antigas.
     await user.getIdToken(true);
+    Storage.setRole(role);
     return user;
   };
+  const _requireOwnerAuth=async()=>{const user=await _requireAdminAuth();if(Storage.getRole()!=='owner')throw new Error('Apenas o dono pode executar esta ação.');return user;};
+  const signInStaff=async(email,password)=>{try{const credential=await firebase.auth().signInWithEmailAndPassword(String(email).trim(),password);const role=(await _db.ref(`roles/${credential.user.uid}/role`).once('value')).val();if(role!=='admin'&&role!=='owner'){await firebase.auth().signOut();Storage.setRole('player');return false;}Storage.setRole(role);window.dispatchEvent(new CustomEvent('ff-auth-change'));return true;}catch{Storage.setRole('player');return false;}};
+  const _auditUpdate=(updates,action,details={})=>{const user=firebase.auth().currentUser,key=_db.ref('auditLog').push().key;updates[`auditLog/${key}`]={actorUid:user.uid,role:Storage.getRole(),action,details,createdAt:Date.now()};};
 
   const _friendlyWriteError = error => {
     if (error?.code === 'PERMISSION_DENIED' || error?.code === 'permission-denied') {
@@ -198,24 +205,24 @@ const DB = (() => {
     const id = _usingFallback
       ? `${createdAt}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36)}`
       : _db.ref('sessions').push().key;
-    const s = { id, confirmed:[], createdAt, status:'open', ...session };
+    const s = { id, confirmed:[], createdAt, status:'open', createdBy:firebase.auth().currentUser?.uid||null, ...session };
     if (_usingFallback) { _cache[id]=s; _saveFallback(); if(_onChange)_onChange(); return s; }
-    await _db.ref(`sessions/${id}`).set({ ...s, confirmed:{} });
+    await _requireAdminAuth();const updates={[`sessions/${id}`]:{...s,confirmed:{}}};_auditUpdate(updates,'session_created',{sessionId:id,eventName:s.eventName||''});await _db.ref().update(updates);
     return s;
   };
 
   const deleteSession = async id => {
-    delete _cache[id];
-    if (_usingFallback) { _saveFallback(); if(_onChange)_onChange(); return; }
-    await _db.ref(`sessions/${id}`).remove();
+    if (_usingFallback) { delete _cache[id]; _saveFallback(); if(_onChange)_onChange(); return; }
+    await _requireAdminAuth();const updates={[`sessions/${id}`]:null};_auditUpdate(updates,'session_cancelled',{sessionId:id});await _db.ref().update(updates);
   };
 
   const updateSession = async (id, updates) => {
     const s = _cache[id]; if(!s) return null;
     _cache[id] = {...s, ...updates};
     if (_usingFallback) { _saveFallback(); if(_onChange)_onChange(); return _cache[id]; }
+    await _requireAdminAuth();
     const { confirmed, ...rest } = updates;
-    if (Object.keys(rest).length > 0) await _db.ref(`sessions/${id}`).update(rest);
+    if (Object.keys(rest).length > 0) {const paths=Object.fromEntries(Object.entries(rest).map(([key,value])=>[`sessions/${id}/${key}`,value]));_auditUpdate(paths,'session_updated',{sessionId:id,fields:Object.keys(rest)});await _db.ref().update(paths);}
     return _cache[id];
   };
 
@@ -264,18 +271,18 @@ const DB = (() => {
   // ── Jogadores ──────────────────────────────────────────────────────────────
   const deletePlayer = async nick => {
     if(_usingFallback)throw new Error('Operação indisponível sem Firebase.');
-    await _requireAdminAuth();
+    await _requireOwnerAuth();
     const id=getPlayerIdByNick(nick),profile=id&&_playersById[id];
     if(!profile)throw new Error('Perfil não encontrado.');
     const updates={[`players/${id}`]:null,[`nickClaims/${profile.nickKey}`]:null,[`userProfiles/${profile.ownerUid}`]:null,[`statAdjustments/${id}`]:null};
     const sessions=(await _db.ref('sessions').once('value')).val()||{};
     Object.entries(sessions).forEach(([sessionId,session])=>{if(session.status==='closed')return;if(session.confirmed?.[id])updates[`sessions/${sessionId}/confirmed/${id}`]=null;if(Array.isArray(session.teams)&&session.teams.flat().includes(profile.nick))updates[`sessions/${sessionId}/teams`]=null;});
-    await _db.ref().update(updates);
+    _auditUpdate(updates,'player_deleted',{playerId:id,nick:profile.nick});await _db.ref().update(updates);
   };
 
   const savePlayerAdmin = async (playerId,{ nick,adjustments }) => {
     if(_usingFallback)throw new Error('Operação indisponível sem Firebase.');
-    await _requireAdminAuth();
+    await _requireOwnerAuth();
     const current=_playersById[playerId];if(!current)throw new Error('Perfil não encontrado.');
     const valid=validateNick(nick);if(!valid.ok)throw new Error(valid.message);
     const allowed=['points','wins','losses','kills','mvps'], clean={};
@@ -290,7 +297,7 @@ const DB = (() => {
         if(Array.isArray(session.teams))updates[`sessions/${sessionId}/teams`]=session.teams.map(team=>Array.isArray(team)?team.map(name=>name===current.nick?valid.nick:name):team);
       });
     }
-    try{await _db.ref().update(updates);}catch(e){if(e?.code==='PERMISSION_DENIED')throw new Error('Nick já utilizado ou regras administrativas não publicadas.');throw e;}
+    _auditUpdate(updates,'player_adjusted',{playerId,nick:valid.nick,adjustments:clean});try{await _db.ref().update(updates);}catch(e){if(e?.code==='PERMISSION_DENIED')throw new Error('Nick já utilizado ou regras administrativas não publicadas.');throw e;}
     return true;
   };
 
@@ -312,10 +319,20 @@ const DB = (() => {
     const resultRows=flat.map(nick=>({ playerId:getPlayerIdByNick(nick), nick, kills:kills.find(k=>k.player===nick).kills, won:teams[result.winner].includes(nick), mvp:result.mvp===nick }));
     if(resultRows.some(r=>!r.playerId)) throw new Error('Todos os participantes precisam possuir um perfil válido.');
     const playerResults=Object.fromEntries(resultRows.map(row=>[row.playerId,row]));
-    const match={ id:matchId,sessionId,eventName:session.eventName||'Partida',teams,winner:result.winner,mvp:result.mvp||null,playerResults,date:now,createdAt:now,season:Storage.getCurrentSeason() };
-    await _db.ref().update({ [`matches/${matchId}`]:match,[`sessions/${sessionId}/status`]:'closed',[`sessions/${sessionId}/closedAt`]:now,[`sessions/${sessionId}/matchId`]:matchId });
+    const match={ id:matchId,sessionId,eventName:session.eventName||'Partida',teams,winner:result.winner,mvp:result.mvp||null,playerResults,date:now,createdAt:now,season:_season?.id||Storage.getCurrentSeason(),finalizedBy:firebase.auth().currentUser.uid,status:'finalized' };
+    const updates={ [`matches/${matchId}`]:match,[`sessions/${sessionId}/status`]:'closed',[`sessions/${sessionId}/closedAt`]:now,[`sessions/${sessionId}/matchId`]:matchId };_auditUpdate(updates,'match_finalized',{matchId,sessionId,winner:result.winner,mvp:result.mvp||null,kills});await _db.ref().update(updates);
     return match;
   };
+
+  const deleteOfficialMatch=async matchId=>{await _requireOwnerAuth();const snap=await _db.ref(`matches/${matchId}`).once('value'),match=snap.val();if(!match)throw new Error('Resultado não encontrado.');const updates={[`matches/${matchId}`]:null,[`sessions/${match.sessionId}/status`]:'open',[`sessions/${match.sessionId}/closedAt`]:null,[`sessions/${match.sessionId}/matchId`]:null};_auditUpdate(updates,'match_cancelled',{matchId,sessionId:match.sessionId});await _db.ref().update(updates);};
+  const correctOfficialMatch=async(matchId,result)=>{await _requireOwnerAuth();const snap=await _db.ref(`matches/${matchId}`).once('value'),match=snap.val();if(!match||match.status!=='finalized')throw new Error('Resultado finalizado não encontrado.');const teams=match.teams||[],flat=teams.flat(),kills=result.kills||[];if(!Number.isInteger(result.winner)||result.winner<0||result.winner>=teams.length)throw new Error('Equipe vencedora inválida.');if(kills.length!==flat.length||kills.some(k=>!Number.isInteger(k.kills)||k.kills<0||k.kills>100))throw new Error('Kills devem ser inteiras entre 0 e 100.');if(result.mvp&&!flat.includes(result.mvp))throw new Error('MVP inválido.');const rows=flat.map(nick=>({playerId:getPlayerIdByNick(nick),nick,kills:kills.find(k=>k.player===nick)?.kills,won:teams[result.winner].includes(nick),mvp:result.mvp===nick}));if(rows.some(r=>!r.playerId||!Number.isInteger(r.kills)))throw new Error('Participantes inválidos.');const now=Date.now(),updates={[`matches/${matchId}/winner`]:result.winner,[`matches/${matchId}/mvp`]:result.mvp||null,[`matches/${matchId}/playerResults`]:Object.fromEntries(rows.map(r=>[r.playerId,r])),[`matches/${matchId}/correctedAt`]:now,[`matches/${matchId}/correctedBy`]:firebase.auth().currentUser.uid};_auditUpdate(updates,'match_corrected',{matchId,sessionId:match.sessionId,winner:result.winner,mvp:result.mvp||null,kills});await _db.ref().update(updates);};
+
+  const setAdminRole=async(uid,label)=>{await _requireOwnerAuth();if(!/^[A-Za-z0-9_-]{6,128}$/.test(uid))throw new Error('UID inválido.');const updates={[`roles/${uid}`]:{role:'admin',label:String(label||'ADM').trim().slice(0,60),updatedAt:Date.now()}};_auditUpdate(updates,'admin_granted',{targetUid:uid,label});await _db.ref().update(updates);};
+  const removeAdminRole=async uid=>{await _requireOwnerAuth();const updates={[`roles/${uid}`]:null};_auditUpdate(updates,'admin_revoked',{targetUid:uid});await _db.ref().update(updates);};
+  const getRoles=async()=>{await _requireOwnerAuth();return (await _db.ref('roles').once('value')).val()||{};};
+  const getAuditLog=async()=>{await _requireOwnerAuth();return Object.values((await _db.ref('auditLog').limitToLast(100).once('value')).val()||{}).sort((a,b)=>b.createdAt-a.createdAt);};
+  const resetPlayerSeason=async playerId=>{await _requireOwnerAuth();if(!_playersById[playerId])throw new Error('Jogador não encontrado.');const seasonId=_season?.id||Storage.getCurrentSeason(),updates={[`seasonResets/${seasonId}/${playerId}`]:{resetAt:Date.now(),byUid:firebase.auth().currentUser.uid},[`statAdjustments/${playerId}`]:null};_auditUpdate(updates,'player_metrics_reset',{playerId,seasonId});await _db.ref().update(updates);};
+  const startNewSeason=async()=>{await _requireOwnerAuth();const old=_season||{id:Storage.getCurrentSeason(),number:1,name:'Temporada 1'},number=(Number(old.number)||1)+1,id=`season-${number}`,now=Date.now();const ranking=Players.getList().map(p=>({playerId:p.playerId,nick:p.nick,points:p.points,stats:Players.getStats(p.nick)}));const updates={[`seasons/archive/${old.id}`]:{...old,endedAt:now,ranking},'seasons/current':{id,number,name:`Temporada ${number}`,startedAt:now}};_auditUpdate(updates,'season_started',{previousSeason:old.id,newSeason:id});await _db.ref().update(updates);};
 
   // ── Torneio ───────────────────────────────────────────────────────────────
   const getTournament = () => _tournamentCache;
@@ -356,8 +373,9 @@ const DB = (() => {
     getSessions, getSession, addSession, deleteSession, updateSession,
     addConfirmed, replaceConfirmed, removeConfirmed,
     deletePlayer, savePlayerAdmin, getPlayerById,
-    finalizeSession,
-    validateNick, createMyProfile, changeMyNick, getMyProfile, getPlayerIdByNick,
+    finalizeSession, deleteOfficialMatch, correctOfficialMatch,
+    validateNick, createMyProfile, changeMyNick, getMyProfile, getPlayerIdByNick, signInStaff,
+    setAdminRole, removeAdminRole, getRoles, getAuditLog, resetPlayerSeason, startNewSeason,
     getTournament, saveTournament, clearTournament,
   };
 })();

@@ -1,0 +1,9 @@
+{
+  "roles": {
+    "SEU_UID_AQUI": {
+      "role": "owner",
+      "label": "Dono",
+      "updatedAt": 0
+    }
+  }
+}

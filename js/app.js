@@ -45,15 +45,16 @@ const UI = (() => {
   const toggleAdmin = async () => {
     if (Storage.isAdmin()) {
       firebase.auth().signOut().then(() => firebase.auth().signInAnonymously()).catch(()=>{});
-      Storage.setAdmin(false);
+      Storage.setRole('player');
       renderAdminBtn();
       toast('🔓 Modo admin desativado');
       showTab(activeTab);
     } else {
       $('admin-password').value = '';
+      if($('admin-email'))$('admin-email').value='';
       $('admin-error')?.classList.add('hidden');
       $('modal-admin')?.classList.remove('hidden');
-      setTimeout(() => $('admin-password')?.focus(), 50);
+      setTimeout(() => $('admin-email')?.focus(), 50);
     }
   };
 
@@ -63,7 +64,7 @@ const UI = (() => {
     if (!input || !button) return;
     button.disabled = true;
     button.textContent = 'Verificando…';
-    const valid = await Storage.authenticateAdmin(input.value);
+    const valid = await DB.signInStaff($('admin-email')?.value||'',input.value);
     button.disabled = false;
     button.textContent = 'Entrar no painel';
     if (!valid) {
@@ -73,7 +74,6 @@ const UI = (() => {
       return;
     }
     input.removeAttribute('aria-invalid');
-    Storage.setAdmin(true);
     $('modal-admin')?.classList.add('hidden');
     toast('🔑 Painel desbloqueado!');
     renderAdminBtn();
@@ -84,7 +84,7 @@ const UI = (() => {
     const btn       = $('admin-btn');
     const scoringBtn= $('btn-scoring-config');
     if (!btn) return;
-    btn.textContent = Storage.isAdmin() ? '🔑 Admin ON' : '🔒 Admin';
+    btn.textContent = Storage.isOwner() ? '👑 Dono' : Storage.isAdmin() ? '🔑 ADM' : '🔒 Admin';
     btn.classList.toggle('admin-active', Storage.isAdmin());
     if (scoringBtn) scoringBtn.style.display = 'none';
   };
@@ -367,6 +367,7 @@ const UI = (() => {
             </div>`).join('') || ''}
           ${m.mvp ? `<div class="mvp-pill">⭐ MVP: ${m.mvp}</div>` : ''}
           ${m.playerResults ? `<div class="match-kills">🎯 ${Object.values(m.playerResults).map(entry => `${escapeHTML(entry.nick)}: ${Number(entry.kills)||0}`).join(' · ')}</div>` : ''}
+          ${Storage.isOwner() ? `<div style="margin-top:8px;display:flex;gap:8px"><button class="btn btn-secondary btn-sm" onclick="UI.openCorrectMatch('${m.id}')">Corrigir</button><button class="btn btn-danger btn-sm" onclick="UI.deleteOfficialMatch('${m.id}')">Cancelar resultado</button></div>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -532,6 +533,9 @@ const UI = (() => {
     const modal = $('modal-confirm');
     if (!modal) return;
     modal.dataset.sessionId = sessionId;
+    modal.dataset.mode = 'finalization';
+    delete modal.dataset.matchId;
+    const title=modal.querySelector('.modal-title');if(title)title.textContent='🏁 Finalizar partida';
     modal.dataset.mode = 'confirm';
     $('confirm-modal-title').textContent = '✅ Confirmar presença';
     $('confirm-nick-input').value = '';
@@ -799,6 +803,10 @@ const UI = (() => {
         <label class="finish-kill-row"><span>${escapeHTML(player)}</span><input class="field-full finish-kill-input" type="number" min="0" step="1" inputmode="numeric" value="0" data-player="${escapeHTML(player)}" required></label>`).join('')}</fieldset>`).join('');
 
     modal.dataset.sessionId = sessionId;
+    modal.dataset.reviewing = '';
+    $('finish-review')?.classList.add('hidden');
+    const submit=$('btn-confirm-finish'); if(submit) submit.textContent='Revisar resultado';
+    [winnerSel,mvpSel,...document.querySelectorAll('#finish-kills-list input')].forEach(e=>e.disabled=false);
     modal.classList.remove('hidden');
   };
 
@@ -821,14 +829,24 @@ const UI = (() => {
     $('finish-kills-error')?.classList.add('hidden');
     const kills = killInputs.map(input => ({ player: input.dataset.player, kills: Number(input.value) }));
 
+    if(modal.dataset.reviewing!=='yes'){
+      const review=$('finish-review');
+      if(review){review.innerHTML=`<strong>Confira os dados.</strong> Depois de finalizar, somente o dono poderá corrigir esta partida.<br>Vencedor: Time ${winnerIdx+1}<br>MVP: ${escapeHTML(mvpNick||'Sem MVP')}<br>Kills: ${kills.map(k=>`${escapeHTML(k.player)} ${k.kills}`).join(' · ')}`;review.classList.remove('hidden');}
+      modal.dataset.reviewing='yes';
+      [ $('finish-winner-sel'), $('finish-mvp-sel'), ...killInputs].forEach(e=>{if(e)e.disabled=true;});
+      const submit=$('btn-confirm-finish');if(submit)submit.textContent='✅ Confirmar finalização';
+      return;
+    }
+
     const button=$('btn-confirm-finish'); if(button){button.disabled=true;button.textContent='Salvando…';}
     try {
-      await DB.finalizeSession(sessionId,{ winner:winnerIdx,mvp:mvpNick,kills });
+      if(modal.dataset.mode==='correction')await DB.correctOfficialMatch(modal.dataset.matchId,{winner:winnerIdx,mvp:mvpNick,kills});
+      else await DB.finalizeSession(sessionId,{ winner:winnerIdx,mvp:mvpNick,kills });
       modal.classList.add('hidden');
-      toast('✅ Partida finalizada e resultado salvo!');
+      toast(modal.dataset.mode==='correction'?'✅ Resultado corrigido pelo dono!':'✅ Partida finalizada e resultado salvo!');
       renderPartidasTab();
     } catch(e) { toast('❌ '+e.message,'err'); }
-    finally { if(button){button.disabled=false;button.textContent='🏁 Finalizar e salvar';} }
+    finally { if(button){button.disabled=false;button.textContent='Revisar resultado';} }
   };
 
   const createPlayerCardBlob = async nick => {
@@ -925,7 +943,8 @@ const UI = (() => {
         </div>`;
     }
 
-    wrap.innerHTML = `
+    const ownerPanel=Storage.isOwner()?`<div class="card" style="margin-bottom:14px"><div class="card-title">👑 Controle do dono</div><p class="hint">Conceda ADM pelo UID da conta autenticada. O cargo não depende do frontend.</p><div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin:12px 0"><input id="owner-admin-uid" class="field-full" placeholder="UID do usuário"><input id="owner-admin-label" class="field-full" placeholder="Nome do ADM"><button class="btn btn-primary" onclick="UI.grantAdmin()">Conceder ADM</button></div><div id="owner-role-list">Carregando cargos…</div><div style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="UI.startNewSeason()">Iniciar nova temporada</button></div><details style="margin-top:12px"><summary>Auditoria recente</summary><div id="owner-audit-list">Carregando…</div></details></div>`:'';
+    wrap.innerHTML = `${ownerPanel}
       <div class="card">
         <div class="card-head">
           <div class="card-title"><div class="card-icon">👤</div> Jogadores</div>
@@ -956,7 +975,13 @@ const UI = (() => {
             </div>`
         }
       </div>`;
+    if(Storage.isOwner())renderOwnerData();
   };
+
+  const renderOwnerData=async()=>{try{const [roles,logs]=await Promise.all([DB.getRoles(),DB.getAuditLog()]);const roleWrap=$('owner-role-list');if(roleWrap)roleWrap.innerHTML=Object.entries(roles).map(([uid,r])=>`<div class="player-row"><div class="player-row-info"><b>${escapeHTML(r.label||r.role)}</b><small>${escapeHTML(uid)} · ${escapeHTML(r.role)}</small></div>${r.role==='admin'?`<button class="btn btn-danger btn-sm" onclick="UI.revokeAdmin('${uid}')">Remover</button>`:''}</div>`).join('')||'<span class="hint">Nenhum ADM comum.</span>';const audit=$('owner-audit-list');if(audit)audit.innerHTML=logs.slice(0,20).map(l=>`<div class="hint">${new Date(l.createdAt).toLocaleString('pt-BR')} · ${escapeHTML(l.action)} · ${escapeHTML(l.actorUid)}</div>`).join('')||'Sem eventos.';}catch(e){toast('❌ '+e.message,'err');}};
+  const grantAdmin=async()=>{try{await DB.setAdminRole($('owner-admin-uid').value.trim(),$('owner-admin-label').value);toast('✅ ADM concedido');renderOwnerData();}catch(e){toast('❌ '+e.message,'err');}};
+  const revokeAdmin=async uid=>{if(!confirm('Remover as permissões deste ADM?'))return;try{await DB.removeAdminRole(uid);toast('✅ Permissão removida');renderOwnerData();}catch(e){toast('❌ '+e.message,'err');}};
+  const startNewSeason=async()=>{if(!confirm('Iniciar uma nova temporada e arquivar o ranking atual?'))return;if(window.prompt('Digite NOVA TEMPORADA para confirmar:')!=='NOVA TEMPORADA')return;try{await DB.startNewSeason();toast('✅ Nova temporada iniciada');}catch(e){toast('❌ '+e.message,'err');}};
 
   const openProfile = (nick) => {
     profileNick = nick;
@@ -967,7 +992,7 @@ const UI = (() => {
 
   let adminPlayerId=null;
   const openPlayerAdmin = nick => {
-    if(!Storage.isAdmin())return;
+    if(!Storage.isOwner())return;
     const player=Storage.getPlayer(nick);if(!player)return;
     adminPlayerId=player.playerId||player.id;const a=player.adjustments||{};
     $('player-admin-title').textContent=`⚙️ Gerenciar ${player.nick}`;
@@ -978,7 +1003,7 @@ const UI = (() => {
   };
   const closePlayerAdmin = () => {adminPlayerId=null;$('modal-player-admin')?.classList.add('hidden');};
   const savePlayerAdmin = async () => {
-    if(!Storage.isAdmin()||!adminPlayerId)return;
+    if(!Storage.isOwner()||!adminPlayerId)return;
     const adjustments={reason:$('player-adjust-reason')?.value||''};
     for(const key of ['points','wins','losses','kills','mvps'])adjustments[key]=Number($(`player-adjust-${key}`)?.value||0);
     const nick=$('player-admin-nick')?.value||'',button=$('btn-save-player-admin');
@@ -988,7 +1013,7 @@ const UI = (() => {
     finally{if(button){button.disabled=false;button.textContent='Salvar alterações';}}
   };
   const deletePlayerAdmin = async () => {
-    if(!Storage.isAdmin()||!adminPlayerId)return;
+    if(!Storage.isOwner()||!adminPlayerId)return;
     const player=DB.getPlayerById(adminPlayerId);if(!player)return;
     if(!confirm(`ATENÇÃO: apagar completamente o perfil "${player.nick}"?\n\nEsta ação remove a identidade, reserva do nick e ajustes administrativos. O histórico oficial das partidas será preservado.`))return;
     const typed=window.prompt(`Para confirmar, digite o nick exatamente como aparece: ${player.nick}`);
@@ -996,6 +1021,10 @@ const UI = (() => {
     try{await DB.deletePlayer(player.nick);profileNick=null;closePlayerAdmin();renderJogadoresTab();toast('🗑 Perfil apagado');}
     catch(e){toast('❌ '+e.message,'err');}
   };
+  const resetPlayerAdmin=async()=>{if(!Storage.isOwner()||!adminPlayerId)return;const player=DB.getPlayerById(adminPlayerId);if(!player)return;if(!confirm(`Zerar as métricas de ${player.nick} somente na temporada atual? O histórico será preservado.`))return;if(window.prompt('Digite ZERAR para confirmar:')!=='ZERAR')return;try{await DB.resetPlayerSeason(adminPlayerId);closePlayerAdmin();toast('✅ Métricas da temporada zeradas');}catch(e){toast('❌ '+e.message,'err');}};
+
+  const deleteOfficialMatch=async matchId=>{if(!Storage.isOwner())return;if(!confirm('Cancelar este resultado oficial? As estatísticas serão recalculadas e a sala será reaberta.'))return;if(window.prompt('Digite CANCELAR para confirmar:')!=='CANCELAR')return;try{await DB.deleteOfficialMatch(matchId);toast('✅ Resultado cancelado');renderPartidasTab();}catch(e){toast('❌ '+e.message,'err');}};
+  const openCorrectMatch=matchId=>{if(!Storage.isOwner())return;const match=Storage.getMatches().find(m=>m.id===matchId);if(!match)return;openFinishMatchModal(match.sessionId);const modal=$('modal-finish-match');modal.dataset.mode='correction';modal.dataset.matchId=matchId;const title=modal.querySelector('.modal-title');if(title)title.textContent='🛠 Corrigir resultado (DONO)';$('finish-winner-sel').value=String(match.winner);$('finish-mvp-sel').value=match.mvp||'';document.querySelectorAll('#finish-kills-list .finish-kill-input').forEach(input=>{const row=Object.values(match.playerResults||{}).find(r=>r.nick===input.dataset.player);input.value=Number(row?.kills)||0;});};
 
   const deletePlayer = (nick) => {
     if (!Storage.isAdmin()) return;
@@ -1471,6 +1500,7 @@ const UI = (() => {
     $('modal-admin-close')?.addEventListener('click', () => $('modal-admin')?.classList.add('hidden'));
     $('btn-admin-login')?.addEventListener('click', submitAdminLogin);
     $('admin-password')?.addEventListener('keydown', e => { if (e.key === 'Enter') submitAdminLogin(); });
+    $('admin-email')?.addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-password')?.focus();});
     $('tournament-result-close')?.addEventListener('click', closeTournamentResult);
     $('tournament-result-confirm')?.addEventListener('click', confirmTournamentResult);
     $('modal-tournament-result')?.addEventListener('click', e => { if (e.target === $('modal-tournament-result')) closeTournamentResult(); });
@@ -1582,6 +1612,7 @@ const UI = (() => {
     $('player-admin-close')?.addEventListener('click',closePlayerAdmin);
     $('btn-save-player-admin')?.addEventListener('click',savePlayerAdmin);
     $('btn-delete-player')?.addEventListener('click',deletePlayerAdmin);
+    $('btn-reset-player')?.addEventListener('click',resetPlayerAdmin);
     $('modal-player-admin')?.addEventListener('click',e=>{if(e.target===$('modal-player-admin'))closePlayerAdmin();});
 
     // ── Modal: Finalizar partida ───────────────────────────────────────────
@@ -1641,6 +1672,7 @@ const UI = (() => {
     addTournamentTeam,
     // jogadores
     openProfile, closePlayerProfile, openPlayerAdmin, deletePlayer, openRegisterModal, openInviteModal, downloadPlayerCard, sharePlayerCard,
+    grantAdmin,revokeAdmin,startNewSeason,deleteOfficialMatch,openCorrectMatch,
     closeRegisterModal, closeInviteModal, doRegister, generateInviteLink,
     // partidas
     confirmPresence, editMyPresence, submitConfirmModal, closeConfirmModal,

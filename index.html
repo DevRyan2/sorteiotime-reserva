@@ -39,9 +39,13 @@
                 </div>
                 <p class="modal-description">Entre para criar salas e gerenciar partidas.</p>
                 <div class="modal-field-group">
+                    <label class="field-label" for="admin-email">E-mail</label>
+                    <input type="email" class="field-full" id="admin-email" autocomplete="username" maxlength="120" />
+                </div>
+                <div class="modal-field-group">
                     <label class="field-label" for="admin-password">Senha do painel</label>
                     <input type="password" class="field-full" id="admin-password" autocomplete="current-password" maxlength="80" />
-                    <p class="field-error hidden" id="admin-error">Senha incorreta. Tente novamente.</p>
+                    <p class="field-error hidden" id="admin-error">Credenciais inválidas ou usuário sem função administrativa.</p>
                 </div>
                 <button class="btn btn-primary btn-full" id="btn-admin-login">Entrar no painel</button>
             </div>
@@ -826,6 +830,7 @@
                 <p class="field-error hidden" id="player-admin-error"></p>
                 <div class="player-admin-actions">
                     <button class="btn btn-danger" id="btn-delete-player">🗑 Apagar perfil</button>
+                    <button class="btn btn-secondary" id="btn-reset-player">Zerar métricas</button>
                     <button class="btn btn-primary" id="btn-save-player-admin">Salvar alterações</button>
                 </div>
             </div>
@@ -872,6 +877,7 @@
                     <div id="finish-kills-list" class="finish-kills-list"></div>
                     <p class="field-error hidden" id="finish-kills-error"></p>
                 </div>
+                <div id="finish-review" class="hidden" style="padding:14px;border:1px solid var(--border);border-radius:12px;margin-bottom:14px;background:rgba(255,193,7,.07)"></div>
                 <div class="btn-bar">
                     <button class="btn btn-secondary" id="btn-cancel-finish">
                         Cancelar

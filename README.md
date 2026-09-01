@@ -37,7 +37,23 @@ firebase deploy --only database
 
 Não use modo de teste em produção e nunca permita escrita pública. O modo de teste serve apenas para desenvolvimento isolado e temporário.
 
-### 3. Configuração web
+### 3. Primeiro DONO
+
+Crie a conta do proprietário em **Authentication > Users**. Copie o UID dessa conta e, pelo console administrativo do Realtime Database (nunca pelo frontend), crie uma única vez:
+
+```json
+"roles": {
+  "UID_DA_CONTA_DO_DONO": {
+    "role": "owner",
+    "label": "Dono",
+    "updatedAt": 0
+  }
+}
+```
+
+Depois disso, o DONO concede e remove o cargo `admin` pela aba Jogadores. As regras impedem que um ADM promova usuários, altere cargos ou modifique o registro do DONO. Cada administrador usa sua própria conta; nenhuma senha deve ser compartilhada ou publicada.
+
+### 4. Configuração web
 
 Preencha [js/firebase-config.js](js/firebase-config.js) com a configuração web exibida pelo Firebase Console:
 
@@ -63,8 +79,25 @@ Esses valores podem ficar no frontend. Não adicione senhas ou service accounts 
 - `/nickClaims/{nickNormalizado}`: reserva atômica que impede nicks duplicados.
 - `/sessions/{sessionId}`: salas; criação e gerenciamento exigem autenticação administrativa.
 - `/matches/{matchId}`: resultados oficiais imutáveis; somente administradores podem criar.
+- `/roles/{uid}`: autorização `owner`/`admin`; apenas o DONO gerencia ADMs.
+- `/auditLog`: trilha imutável das ações sensíveis, visível ao DONO.
+- `/seasons` e `/seasonResets`: temporada atual, arquivos e marcos de reset sem apagar histórico.
 
 Kills, vitórias, derrotas, MVPs, pontos e rank não são aceitos em `/players`. Essas estatísticas são derivadas exclusivamente de `/matches` oficiais.
+
+## Matriz de permissões
+
+| Ação | Jogador | ADM | DONO |
+|---|---:|---:|---:|
+| Ver salas, perfis e ranking | Sim | Sim | Sim |
+| Alterar o próprio nick | Sim | — | — |
+| Criar/operar sala aberta e finalizar uma vez | Não | Sim | Sim |
+| Alterar ou apagar resultado finalizado | Não | Não | Sim |
+| Corrigir/apagar perfil e zerar métricas | Não | Não | Sim |
+| Iniciar temporada e arquivar ranking | Não | Não | Sim |
+| Conceder/remover ADM e ver auditoria | Não | Não | Sim |
+
+Esta matriz é aplicada em `database.rules.json`; ocultar controles na interface é apenas uma melhoria visual.
 
 ## Limitações importantes
 

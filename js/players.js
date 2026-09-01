@@ -184,7 +184,7 @@ const Players = (() => {
       ? stats.bestMates.map(m=>`<div class="mate-row"><span class="mate-name">${esc(m.name)}</span><span class="mate-wr" style="color:${m.wr>=60?'var(--green)':m.wr>=40?'var(--accent)':'var(--red)'}">${m.wr}% WR</span><span class="mate-games">${m.games}j</span></div>`).join('')
       : `<span style="color:var(--muted);font-size:12px">Dados insuficientes (mín. 2 partidas juntos)</span>`;
 
-    const adminDeleteBtn = Storage.isAdmin() ? `<button class="btn btn-ghost btn-sm" onclick="UI.openPlayerAdmin(decodeURIComponent('${encodeURIComponent(nick)}'))">⚙️ Gerenciar</button>` : '';
+    const adminDeleteBtn = Storage.isOwner() ? `<button class="btn btn-ghost btn-sm" onclick="UI.openPlayerAdmin(decodeURIComponent('${encodeURIComponent(nick)}'))">⚙️ Gerenciar</button>` : '';
 
     const rankingPosition = getList().findIndex(player => player.nick === nick) + 1;
     const isOwnProfile = Storage.getMyNick().toLocaleLowerCase('pt-BR') === nick.toLocaleLowerCase('pt-BR');
