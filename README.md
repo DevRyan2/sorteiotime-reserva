@@ -23,7 +23,7 @@ Nunca coloque senhas, service accounts, chaves privadas ou tokens administrativo
 No Firebase Console, ative:
 
 - **Anônimo**, usado pelos jogadores;
-- **E-mail/senha**, usado somente pelas contas administrativas.
+- **E-mail/senha**, usado pela conta principal do DONO. ADMs comuns podem receber o cargo diretamente no UID anônimo persistente do dispositivo.
 
 Jogadores são identificados pelo UID anônimo persistente do Firebase. O nick é apenas nome de exibição. `localStorage` não é autenticação e não guarda estatísticas oficiais.
 
@@ -51,7 +51,7 @@ Crie a conta do proprietário em **Authentication > Users**. Copie o UID dessa c
 }
 ```
 
-Depois disso, o DONO concede e remove o cargo `admin` pela aba Jogadores. As regras impedem que um ADM promova usuários, altere cargos ou modifique o registro do DONO. Cada administrador usa sua própria conta; nenhuma senha deve ser compartilhada ou publicada.
+Depois disso, o DONO concede e remove o cargo `admin` pela aba Jogadores. Um jogador pode copiar o código do próprio dispositivo (seu `auth.uid`) e enviá-lo ao DONO; o cargo passa a aparecer em tempo real, sem senha. As regras impedem que um ADM promova usuários, altere cargos ou modifique o registro do DONO. O acesso do ADM fica vinculado à credencial anônima daquele navegador, portanto limpar os dados do site remove o acesso local e exige nova autorização.
 
 ### 4. Configuração web
 

@@ -1,7 +1,7 @@
 // db.js — camada de dados em tempo real (Firebase Realtime Database)
 const DB = (() => {
   let _db = null, _ready = false, _usingFallback = false;
-  let _cache = {}, _tournamentCache = null, _onChange = null, _playersById = {}, _matchesCache = [], _statAdjustments = {}, _season=null, _seasonResets={};
+  let _cache = {}, _tournamentCache = null, _onChange = null, _playersById = {}, _matchesCache = [], _statAdjustments = {}, _season=null, _seasonResets={}, _roleRef=null;
 
   const init = () => {
     const cfg = window.FIREBASE_CONFIG;
@@ -15,15 +15,19 @@ const DB = (() => {
       // localStorage nunca é aceito como prova de identidade.
       firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
       firebase.auth().onAuthStateChanged(async user => {
-        const role=user?(await _db.ref(`roles/${user.uid}/role`).once('value').catch(()=>({val:()=>null}))).val():'player';
-        Storage.setRole(role||'player');
-        const admin=Storage.isAdmin();
+        if(_roleRef){_roleRef.off();_roleRef=null;}
         if (!user) {
+          Storage.setRole('player');
+          window.dispatchEvent(new CustomEvent('ff-auth-change'));
           try { await firebase.auth().signInAnonymously(); } catch(e) { console.error('[Auth] Anonymous sign-in:', e); }
-        } else if (!admin) {
-          _loadMyProfile(user.uid).catch(()=>{});
+          return;
         }
-        window.dispatchEvent(new CustomEvent('ff-auth-change'));
+        _roleRef=_db.ref(`roles/${user.uid}/role`);
+        _roleRef.on('value',snap=>{
+          const role=snap.val();Storage.setRole(role==='owner'||role==='admin'?role:'player');
+          window.dispatchEvent(new CustomEvent('ff-auth-change'));
+        },()=>{Storage.setRole('player');window.dispatchEvent(new CustomEvent('ff-auth-change'));});
+        if(user.isAnonymous)_loadMyProfile(user.uid).catch(()=>{});
       });
 
       _db.ref('sessions').on('value', snap => {

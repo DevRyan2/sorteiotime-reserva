@@ -44,6 +44,7 @@ const UI = (() => {
   // ── Admin ──────────────────────────────────────────────────────────────────
   const toggleAdmin = async () => {
     if (Storage.isAdmin()) {
+      if(firebase.auth().currentUser?.isAnonymous){toast('🔑 Este dispositivo recebeu acesso de ADM automaticamente.');return;}
       firebase.auth().signOut().then(() => firebase.auth().signInAnonymously()).catch(()=>{});
       Storage.setRole('player');
       renderAdminBtn();
@@ -936,6 +937,7 @@ const UI = (() => {
       myNickHtml = `<div style="margin-bottom:12px">
           <strong>Seu nick:</strong> ${escapeHTML(myNick)}
           <button class="btn btn-ghost btn-sm" style="margin-left:8px" onclick="UI.promptEditNick()">Trocar perfil</button>
+          <button class="btn btn-ghost btn-sm" style="margin-left:8px" onclick="UI.copyMyAdminCode()">Copiar código para ADM</button>
         </div>`;
     } else {
       myNickHtml = `<div style="margin-bottom:12px">
@@ -943,7 +945,8 @@ const UI = (() => {
         </div>`;
     }
 
-    const ownerPanel=Storage.isOwner()?`<div class="card" style="margin-bottom:14px"><div class="card-title">👑 Controle do dono</div><p class="hint">Conceda ADM pelo UID da conta autenticada. O cargo não depende do frontend.</p><div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin:12px 0"><input id="owner-admin-uid" class="field-full" placeholder="UID do usuário"><input id="owner-admin-label" class="field-full" placeholder="Nome do ADM"><button class="btn btn-primary" onclick="UI.grantAdmin()">Conceder ADM</button></div><div id="owner-role-list">Carregando cargos…</div><div style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="UI.startNewSeason()">Iniciar nova temporada</button></div><details style="margin-top:12px"><summary>Auditoria recente</summary><div id="owner-audit-list">Carregando…</div></details></div>`:'';
+    const linkedPlayers=list.filter(p=>p.ownerUid&&p.ownerUid!=='RECOVERY_UNCLAIMED');
+    const ownerPanel=Storage.isOwner()?`<div class="card" style="margin-bottom:14px"><div class="card-title">👑 Controle do dono</div><p class="hint">Escolha um perfil vinculado ou cole o código que a pessoa copiou no próprio dispositivo. O acesso aparece para ela em tempo real, sem senha.</p><div style="display:grid;grid-template-columns:2fr 2fr 1fr auto;gap:8px;margin:12px 0"><select id="owner-admin-player" class="field-full"><option value="">Selecionar jogador vinculado</option>${linkedPlayers.map(p=>`<option value="${escapeHTML(p.ownerUid)}">${escapeHTML(p.nick)}</option>`).join('')}</select><input id="owner-admin-uid" class="field-full" placeholder="Ou cole o código/UID"><input id="owner-admin-label" class="field-full" placeholder="Nome do ADM"><button class="btn btn-primary" onclick="UI.grantAdmin()">Conceder ADM</button></div><div id="owner-role-list">Carregando cargos…</div><div style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="UI.startNewSeason()">Iniciar nova temporada</button></div><details style="margin-top:12px"><summary>Auditoria recente</summary><div id="owner-audit-list">Carregando…</div></details></div>`:'';
     wrap.innerHTML = `${ownerPanel}
       <div class="card">
         <div class="card-head">
@@ -979,7 +982,8 @@ const UI = (() => {
   };
 
   const renderOwnerData=async()=>{try{const [roles,logs]=await Promise.all([DB.getRoles(),DB.getAuditLog()]);const roleWrap=$('owner-role-list');if(roleWrap)roleWrap.innerHTML=Object.entries(roles).map(([uid,r])=>`<div class="player-row"><div class="player-row-info"><b>${escapeHTML(r.label||r.role)}</b><small>${escapeHTML(uid)} · ${escapeHTML(r.role)}</small></div>${r.role==='admin'?`<button class="btn btn-danger btn-sm" onclick="UI.revokeAdmin('${uid}')">Remover</button>`:''}</div>`).join('')||'<span class="hint">Nenhum ADM comum.</span>';const audit=$('owner-audit-list');if(audit)audit.innerHTML=logs.slice(0,20).map(l=>`<div class="hint">${new Date(l.createdAt).toLocaleString('pt-BR')} · ${escapeHTML(l.action)} · ${escapeHTML(l.actorUid)}</div>`).join('')||'Sem eventos.';}catch(e){toast('❌ '+e.message,'err');}};
-  const grantAdmin=async()=>{try{await DB.setAdminRole($('owner-admin-uid').value.trim(),$('owner-admin-label').value);toast('✅ ADM concedido');renderOwnerData();}catch(e){toast('❌ '+e.message,'err');}};
+  const grantAdmin=async()=>{try{const uid=$('owner-admin-player')?.value||$('owner-admin-uid')?.value.trim();await DB.setAdminRole(uid,$('owner-admin-label').value||$('owner-admin-player')?.selectedOptions[0]?.textContent);toast('✅ ADM concedido — aparecerá automaticamente no dispositivo da pessoa');renderOwnerData();}catch(e){toast('❌ '+e.message,'err');}};
+  const copyMyAdminCode=async()=>{const user=firebase.auth().currentUser;if(!user?.isAnonymous){toast('Abra como jogador para copiar o código.','warn');return;}try{await navigator.clipboard.writeText(user.uid);toast('✅ Código copiado. Envie ao dono.');}catch{window.prompt('Copie este código e envie ao dono:',user.uid);}};
   const revokeAdmin=async uid=>{if(!confirm('Remover as permissões deste ADM?'))return;try{await DB.removeAdminRole(uid);toast('✅ Permissão removida');renderOwnerData();}catch(e){toast('❌ '+e.message,'err');}};
   const startNewSeason=async()=>{if(!confirm('Iniciar uma nova temporada e arquivar o ranking atual?'))return;if(window.prompt('Digite NOVA TEMPORADA para confirmar:')!=='NOVA TEMPORADA')return;try{await DB.startNewSeason();toast('✅ Nova temporada iniciada');}catch(e){toast('❌ '+e.message,'err');}};
 
@@ -1496,6 +1500,7 @@ const UI = (() => {
       if (!Storage.isAdmin()) DB.getMyProfile().then(profile => { if(profile && activeTab==='perfil') renderPerfilTab(); }).catch(()=>{});
       if (activeTab === 'partidas') renderSessions();
       if (activeTab === 'torneio') renderTorneioTab();
+      if (activeTab === 'jogadores') renderJogadoresTab();
     });
     $('modal-admin-close')?.addEventListener('click', () => $('modal-admin')?.classList.add('hidden'));
     $('btn-admin-login')?.addEventListener('click', submitAdminLogin);
@@ -1672,7 +1677,7 @@ const UI = (() => {
     addTournamentTeam,
     // jogadores
     openProfile, closePlayerProfile, openPlayerAdmin, deletePlayer, openRegisterModal, openInviteModal, downloadPlayerCard, sharePlayerCard,
-    grantAdmin,revokeAdmin,startNewSeason,deleteOfficialMatch,openCorrectMatch,
+    grantAdmin,revokeAdmin,startNewSeason,deleteOfficialMatch,openCorrectMatch,copyMyAdminCode,
     closeRegisterModal, closeInviteModal, doRegister, generateInviteLink,
     // partidas
     confirmPresence, editMyPresence, submitConfirmModal, closeConfirmModal,
