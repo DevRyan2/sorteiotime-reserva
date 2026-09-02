@@ -1085,6 +1085,7 @@ const UI = (() => {
   const closePlayerAccount=()=>$('modal-player-account')?.classList.add('hidden');
   const submitPlayerAccount=async mode=>{const email=$('player-account-email')?.value.trim(),password=$('player-account-password')?.value||'',name=$('player-account-name')?.value.trim()||'',error=$('player-account-error'),buttons=[$('player-account-login'),$('player-account-register')];if(!email||password.length<6){error.textContent='Informe um e-mail válido e uma senha com pelo menos 6 caracteres.';error.classList.remove('hidden');return;}buttons.forEach(b=>{if(b)b.disabled=true;});try{if(mode==='register')await DB.registerPlayerAccount(email,password,name);else await DB.signInPlayer(email,password);closePlayerAccount();toast(mode==='register'?'✅ Conta criada':'✅ Conta acessada');renderPerfilTab();renderJogadoresTab();}catch(e){const messages={'auth/email-already-in-use':'Este e-mail já possui uma conta. Use Entrar.','auth/invalid-login-credentials':'E-mail ou senha incorretos.','auth/wrong-password':'E-mail ou senha incorretos.','auth/invalid-email':'E-mail inválido.','auth/credential-already-in-use':'Este e-mail já pertence a outra conta.'};error.textContent=messages[e.code]||e.message||'Não foi possível acessar a conta.';error.classList.remove('hidden');}finally{buttons.forEach(b=>{if(b)b.disabled=false;});}};
   const signOutPlayerAccount=async()=>{try{await DB.signOutPlayer();toast('Você saiu da conta.');renderPerfilTab();renderJogadoresTab();}catch(e){toast('❌ '+e.message,'err');}};
+  const forgotPlayerPassword=async()=>{const email=$('player-account-email')?.value.trim(),error=$('player-account-error'),button=$('player-account-forgot'),success=()=>toast('✅ Se esse endereço existir e receber mensagens, o Firebase enviará o link de recuperação.');if(button)button.disabled=true;try{await DB.sendPlayerPasswordReset(email);success();}catch(e){if(e.code==='auth/user-not-found'){success();return;}const messages={'auth/invalid-email':'Informe o identificador em formato de e-mail.','auth/too-many-requests':'Muitas tentativas. Aguarde alguns minutos.'};if(error){error.textContent=messages[e.code]||e.message||'Não foi possível solicitar a recuperação.';error.classList.remove('hidden');}}finally{if(button)button.disabled=false;}};
 
   const openInviteModal = () => {
     const modal = $('modal-invite');
@@ -1643,6 +1644,7 @@ const UI = (() => {
     $('player-account-close')?.addEventListener('click',closePlayerAccount);
     $('player-account-login')?.addEventListener('click',()=>submitPlayerAccount('login'));
     $('player-account-register')?.addEventListener('click',()=>submitPlayerAccount('register'));
+    $('player-account-forgot')?.addEventListener('click',forgotPlayerPassword);
     $('player-account-password')?.addEventListener('keydown',e=>{if(e.key==='Enter')submitPlayerAccount('login');});
     $('modal-invite-close')?.addEventListener('click', closeInviteModal);
     $('btn-gen-invite')?.addEventListener('click', generateInviteLink);

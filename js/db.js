@@ -173,6 +173,7 @@ const DB = (() => {
 
   const registerPlayerAccount=async(email,password,name)=>{const auth=firebase.auth(),current=auth.currentUser,credential=firebase.auth.EmailAuthProvider.credential(String(email).trim(),password);let user;if(current?.isAnonymous){user=(await current.linkWithCredential(credential)).user;}else{user=(await auth.createUserWithEmailAndPassword(String(email).trim(),password)).user;}const displayName=String(name||'').trim().slice(0,60);if(displayName)await user.updateProfile({displayName});await user.getIdToken(true);window.dispatchEvent(new CustomEvent('ff-auth-change'));return user;};
   const signInPlayer=async(email,password)=>{const user=(await firebase.auth().signInWithEmailAndPassword(String(email).trim(),password)).user;const role=(await _db.ref(`roles/${user.uid}/role`).once('value')).val();if(role==='admin'||role==='owner'){await firebase.auth().signOut();throw new Error('Use o acesso administrativo para esta conta.');}return user;};
+  const sendPlayerPasswordReset=async email=>{const clean=String(email||'').trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean))throw new Error('Informe o identificador usado para entrar.');await firebase.auth().sendPasswordResetEmail(clean);};
   const signOutPlayer=async()=>{await firebase.auth().signOut();Storage.setMyNick(null);};
 
   const getPlayerIdByNick = nick => Object.entries(_playersById).find(([,p]) => p.nick?.toLocaleLowerCase('pt-BR') === String(nick).toLocaleLowerCase('pt-BR'))?.[0] || _playerAliases[nickKey(nick)] || null;
@@ -396,7 +397,7 @@ const DB = (() => {
     deletePlayer, savePlayerAdmin, getPlayerById,
     finalizeSession, deleteOfficialMatch, correctOfficialMatch,
     validateNick, createMyProfile, changeMyNick, updateMyProfile, getMyProfile, getPlayerIdByNick, signInStaff,
-    registerPlayerAccount, signInPlayer, signOutPlayer,
+    registerPlayerAccount, signInPlayer, sendPlayerPasswordReset, signOutPlayer,
     getPlayerName, createProfileTransfer, cancelProfileTransfer, getProfileTransfer, acceptProfileTransfer,
     setAdminRole, removeAdminRole, getRoles, getAuditLog, resetPlayerSeason, startNewSeason,
     getTournament, saveTournament, clearTournament,
