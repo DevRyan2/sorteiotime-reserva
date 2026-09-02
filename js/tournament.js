@@ -12,10 +12,10 @@ const Tournament = (() => {
   const create = (teams, options={}) => {
     if(!Array.isArray(teams)||teams.length<2||teams.length%2!==0) throw new Error('O torneio precisa de uma quantidade par de equipes.');
     if(teams.some(t=>!t?.name||!Array.isArray(t.members)||t.members.length===0)) throw new Error('Todas as equipes precisam de nome e participantes.');
-    bracket={teams:teams.map(t=>({...t,members:[...t.members],available:t.available!==false})),rounds:[],champion:null,format:options.format||'Livre',teamSize:options.teamSize||1,createdAt:Date.now(),version:4};
+    bracket={teams:teams.map(t=>({...t,members:[...t.members],memberIds:Array.isArray(t.memberIds)?[...t.memberIds]:t.members.map(name=>DB.getPlayerIdByNick(name)),available:t.available!==false})),rounds:[],champion:null,format:options.format||'Livre',teamSize:options.teamSize||1,createdAt:Date.now(),version:5};
     bracket.rounds.push(_makeRound(options.manual?bracket.teams:_shuffle(bracket.teams))); return bracket;
   };
-  const load = () => { const saved=DB.getTournament(); bracket=saved&&[3,4].includes(saved.version)?saved:null;if(bracket){bracket.version=4;(bracket.teams||[]).forEach(t=>{if(typeof t.available!=='boolean')t.available=true;});}return bracket; };
+  const load = () => { const saved=DB.getTournament(); bracket=saved&&[3,4,5].includes(saved.version)?saved:null;if(bracket){bracket.version=5;const resolveTeam=t=>{if(!t)return;if(typeof t.available!=='boolean')t.available=true;if(!Array.isArray(t.memberIds))t.memberIds=(t.members||[]).map(name=>DB.getPlayerIdByNick(name));t.members=(t.members||[]).map((name,i)=>DB.getPlayerName(t.memberIds[i],name));};(bracket.teams||[]).forEach(resolveTeam);(bracket.rounds||[]).forEach(r=>{(r.matches||[]).forEach(m=>{resolveTeam(m.t1);resolveTeam(m.t2);resolveTeam(m.winner);if(m.result){(m.result.kills||[]).forEach(e=>{e.playerId=e.playerId||DB.getPlayerIdByNick(e.player);e.player=DB.getPlayerName(e.playerId,e.player);});m.result.mvpPlayerIds=m.result.mvpPlayerIds||(m.result.mvps||[]).map(name=>DB.getPlayerIdByNick(name));m.result.mvps=(m.result.mvps||[]).map((name,i)=>DB.getPlayerName(m.result.mvpPlayerIds[i],name));}});(r.carried||[]).forEach(resolveTeam);resolveTeam(r.directAdvance);});resolveTeam(bracket.champion);}return bracket; };
   const reset = () => { bracket=null; };
   const _label = team => team?.name||'Equipe';
   const _roster = team => (team?.members||[]).join(', ');
@@ -35,12 +35,12 @@ const Tournament = (() => {
     if(!Array.isArray(kills)||kills.length!==players.length)return null;
     const killMap=new Map(kills.map(entry=>[_playerKey(entry.player),Number(entry.kills)]));
     if(players.some(player=>!killMap.has(_playerKey(player))||!Number.isInteger(killMap.get(_playerKey(player)))||killMap.get(_playerKey(player))<0))return null;
-    const normalizedKills=players.map(player=>({player,kills:killMap.get(_playerKey(player))}));
+    const normalizedKills=players.map(player=>({playerId:DB.getPlayerIdByNick(player),player,kills:killMap.get(_playerKey(player))}));
     const maxKills=Math.max(...normalizedKills.map(entry=>entry.kills));
-    const mvps=normalizedKills.filter(entry=>entry.kills===maxKills).map(entry=>entry.player);
+    const mvpRows=normalizedKills.filter(entry=>entry.kills===maxKills),mvps=mvpRows.map(entry=>entry.player),mvpPlayerIds=mvpRows.map(entry=>entry.playerId);
     const previousConfirmedAt=m.result?.confirmedAt||Date.now();
     bracket.rounds=bracket.rounds.slice(0,ri+1); bracket.champion=null; r.awaitingDirectAdvance=false;r.directAdvance=null;m.winner=winner;
-    m.result={kills:normalizedKills,mvps,totalKills:normalizedKills.reduce((sum,entry)=>sum+entry.kills,0),confirmedAt:previousConfirmedAt,updatedAt:Date.now()};
+    m.result={kills:normalizedKills,mvps,mvpPlayerIds,totalKills:normalizedKills.reduce((sum,entry)=>sum+entry.kills,0),confirmedAt:previousConfirmedAt,updatedAt:Date.now()};
     _evaluateRound(ri);return bracket;
   };
   const setWinner = () => null;
@@ -68,9 +68,9 @@ const Tournament = (() => {
     (bracket.teams||[]).forEach(team=>{
       const update=byId.get(team.id);if(!update)return;
       (team.members||[]).forEach((oldName,index)=>playerRenames.set(_playerKey(oldName),update.members[index]));
-      team.name=update.name;team.members=[...update.members];
+      team.name=update.name;team.members=[...update.members];team.memberIds=update.members.map(name=>DB.getPlayerIdByNick(name));
     });
-    const syncTeam=team=>{const update=byId.get(team?.id);if(update){team.name=update.name;team.members=[...update.members];}};
+    const syncTeam=team=>{const update=byId.get(team?.id);if(update){team.name=update.name;team.members=[...update.members];team.memberIds=update.members.map(name=>DB.getPlayerIdByNick(name));}};
     (bracket.rounds||[]).forEach(round=>{
       (round.matches||[]).forEach(match=>{
         syncTeam(match.t1);syncTeam(match.t2);syncTeam(match.winner);
@@ -128,13 +128,13 @@ const Tournament = (() => {
   const getStats = () => {
     if(!bracket)return {ranking:[],matchMvps:[],overallMvps:[],topKillers:[]};
     const players=new Map();
-    (bracket.teams||[]).forEach(team=>(team.members||[]).forEach(name=>players.set(_playerKey(name),{name,kills:0,mvps:0,matches:0})));
+    (bracket.teams||[]).forEach(team=>(team.members||[]).forEach((name,i)=>{const id=team.memberIds?.[i]||DB.getPlayerIdByNick(name),key=id||_playerKey(name);players.set(key,{playerId:id,name:DB.getPlayerName(id,name),kills:0,mvps:0,matches:0});}));
     const matchMvps=[];
     (bracket.rounds||[]).forEach((round,ri)=>(round.matches||[]).forEach((match,mi)=>{
       if(!match.result)return;
-      (match.result.kills||[]).forEach(entry=>{const p=players.get(_playerKey(entry.player));if(p){p.kills+=Number(entry.kills)||0;p.matches++;}});
-      (match.result.mvps||[]).forEach(name=>{const p=players.get(_playerKey(name));if(p)p.mvps++;});
-      matchMvps.push({round:round.name,match:mi+1,players:[...(match.result.mvps||[])]});
+      (match.result.kills||[]).forEach(entry=>{const p=players.get(entry.playerId||_playerKey(entry.player));if(p){p.kills+=Number(entry.kills)||0;p.matches++;}});
+      (match.result.mvps||[]).forEach((name,i)=>{const p=players.get(match.result.mvpPlayerIds?.[i]||_playerKey(name));if(p)p.mvps++;});
+      matchMvps.push({round:round.name,match:mi+1,players:(match.result.mvps||[]).map((name,i)=>DB.getPlayerName(match.result.mvpPlayerIds?.[i],name))});
     }));
     const ranking=[...players.values()].sort((a,b)=>b.kills-a.kills||b.mvps-a.mvps||a.name.localeCompare(b.name,'pt-BR'));
     const maxKills=ranking[0]?.kills??0,maxMvps=Math.max(0,...ranking.map(p=>p.mvps));

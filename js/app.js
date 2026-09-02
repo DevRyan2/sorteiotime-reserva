@@ -771,11 +771,13 @@ const UI = (() => {
     if (!wrap) return;
     wrap.innerHTML='<div class="card profile-loading">⏳ Carregando seu perfil…</div>';
     try {
+      const user=firebase.auth().currentUser;
+      const account=user&&!user.isAnonymous&&!Storage.isAdmin()?`<div class="card" style="margin-bottom:14px"><div class="card-title">Conta do jogador</div><p class="hint">${escapeHTML(user.displayName||'Jogador')} · ${escapeHTML(user.email||'')}</p><button class="btn btn-ghost btn-sm" onclick="UI.signOutPlayerAccount()">Sair da conta</button></div>`:`<div class="card" style="margin-bottom:14px"><div class="card-title">Acesse seu perfil em qualquer dispositivo</div><p class="hint">Crie uma conta ou entre para reivindicar e manter seu perfil.</p><button class="btn btn-primary btn-sm" onclick="UI.openPlayerAccount()">Criar conta / Entrar</button></div>`;
       const profile=await DB.getMyProfile();
-      if(!profile){wrap.innerHTML='<div class="card"><p class="profile-state-text">Você ainda não possui um perfil neste navegador. Defina seu nick na aba <b>Jogadores</b>.</p></div>';return;}
+      if(!profile){wrap.innerHTML=account+'<div class="card"><p class="profile-state-text">Você ainda não possui um perfil. Para receber um perfil existente, aguarde o link seguro enviado diretamente pelo Dono.</p></div>';return;}
       const html=Players.renderProfile(profile.nick);
       if(!html){wrap.innerHTML='<div class="card profile-loading">⏳ Sincronizando estatísticas do Firebase…</div>';return;}
-      wrap.innerHTML=`<div class="card profile-card">${html}</div>`;
+      wrap.innerHTML=account+`<div class="card profile-card">${html}</div>`;
     }catch(e){wrap.innerHTML=`<div class="card"><p class="profile-state-text">Não foi possível carregar o perfil. ${escapeHTML(e.message)}</p><button class="btn btn-ghost btn-sm" onclick="UI.renderPerfilTab()">Tentar novamente</button></div>`;}
   };
 
@@ -972,6 +974,7 @@ const UI = (() => {
                     <span style="color:${wrColor}">${stats.winrate}% WR</span>
                     <span style="color:var(--muted);font-size:11px">${stats.total}j</span>
                     ${(p.achievements||[]).length > 0 ? `<span title="${(p.achievements||[]).length} conquistas">🏅×${(p.achievements||[]).length}</span>` : ''}
+                    ${p.ownerUid==='RECOVERY_UNCLAIMED'?'<small>Perfil aguardando transferência pelo Dono</small>':'<small>Perfil já vinculado a uma conta</small>'}
                   </div>
                 </div>`;
               }).join('')}
@@ -998,7 +1001,7 @@ const UI = (() => {
   const setCustomizePreview=(avatar,nick='?')=>{const preview=$('profile-photo-preview');if(preview)preview.innerHTML=avatar?`<img src="${escapeHTML(avatar)}" alt="Prévia da foto">`:escapeHTML((nick||'?').charAt(0).toUpperCase());};
   const openCustomizeProfile=async()=>{try{const profile=await DB.getMyProfile();if(!profile)throw new Error('Este perfil não está vinculado a este dispositivo.');customizeAvatar=undefined;$('profile-bio-input').value=profile.bio||'';$('profile-bio-count').textContent=String((profile.bio||'').length);$('profile-customize-error')?.classList.add('hidden');setCustomizePreview(profile.avatar,profile.nick);$('modal-customize-profile')?.classList.remove('hidden');}catch(e){toast('❌ '+e.message,'err');}};
   const closeCustomizeProfile=()=>{$('modal-customize-profile')?.classList.add('hidden');const input=$('profile-photo-input');if(input)input.value='';customizeAvatar=undefined;};
-  const compressProfilePhoto=async file=>{if(!/^image\/(jpeg|png|webp)$/.test(file.type)||file.size>10*1024*1024)throw new Error('Escolha uma imagem JPG, PNG ou WebP de até 10 MB.');const bitmap=await createImageBitmap(file),max=320,scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));const ctx=canvas.getContext('2d');ctx.fillStyle='#08130c';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();let quality=.82,data=canvas.toDataURL('image/jpeg',quality);while(data.length>180000&&quality>.42){quality-=.1;data=canvas.toDataURL('image/jpeg',quality);}if(data.length>180000)throw new Error('Não foi possível reduzir essa imagem. Escolha uma foto menor.');return data;};
+  const compressProfilePhoto=async file=>{if(!/^image\/(jpeg|png|webp)$/.test(file.type)||file.size>10*1024*1024)throw new Error('Escolha uma imagem JPG, PNG ou WebP de até 10 MB.');let source;try{if('createImageBitmap'in window)source=await createImageBitmap(file);else throw new Error();}catch{source=await new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);resolve(img);};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('O arquivo está corrompido ou não é uma imagem válida.'));};img.src=url;});}if(!source.width||!source.height)throw new Error('A imagem não possui dimensões válidas.');const max=320,scale=Math.min(1,max/Math.max(source.width,source.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(source.width*scale));canvas.height=Math.max(1,Math.round(source.height*scale));const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Seu navegador não conseguiu processar a imagem.');ctx.fillStyle='#08130c';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(source,0,0,canvas.width,canvas.height);source.close?.();let quality=.82,data=canvas.toDataURL('image/jpeg',quality);while(data.length>175000&&quality>.32){quality-=.08;data=canvas.toDataURL('image/jpeg',quality);}if(!data.startsWith('data:image/jpeg;base64,')||data.length>180000)throw new Error('Não foi possível reduzir essa imagem. Escolha uma foto menor.');return data;};
   const handleProfilePhoto=async e=>{const file=e.target.files?.[0];if(!file)return;try{customizeAvatar=await compressProfilePhoto(file);setCustomizePreview(customizeAvatar);}catch(err){toast('❌ '+err.message,'err');e.target.value='';}};
   const saveCustomizeProfile=async()=>{const button=$('profile-customize-save');if(button){button.disabled=true;button.textContent='Salvando…';}try{await DB.updateMyProfile({bio:$('profile-bio-input')?.value||'',avatar:customizeAvatar});closeCustomizeProfile();toast('✅ Perfil personalizado');if(profileNick)renderJogadoresTab();if(activeTab==='perfil')renderPerfilTab();}catch(e){const error=$('profile-customize-error');if(error){error.textContent=e.message;error.classList.remove('hidden');}}finally{if(button){button.disabled=false;button.textContent='Salvar perfil';}}};
 
@@ -1014,6 +1017,11 @@ const UI = (() => {
     $('modal-player-admin')?.classList.remove('hidden');
   };
   const closePlayerAdmin = () => {adminPlayerId=null;$('modal-player-admin')?.classList.add('hidden');};
+  const transferProfile=async()=>{if(!Storage.isOwner()||!adminPlayerId)return;try{const transfer=await DB.createProfileTransfer(adminPlayerId),base=location.href.split('#')[0].split('?')[0],url=`${base}#transfer=${transfer.token}`;try{await navigator.clipboard.writeText(url);toast('✅ Link único copiado. Expira em 7 dias.');}catch{window.prompt('Copie o link seguro e envie diretamente ao jogador:',url);}}catch(e){toast('❌ '+e.message,'err');}};
+  const cancelProfileTransfer=async()=>{if(!Storage.isOwner()||!adminPlayerId)return;if(!confirm('Cancelar o link de transferência ativo deste perfil?'))return;try{await DB.cancelProfileTransfer(adminPlayerId);toast('✅ Transferência cancelada');}catch(e){toast('❌ '+e.message,'err');}};
+  let pendingTransferToken=null;
+  const openProfileTransfer=async token=>{pendingTransferToken=token;const modal=$('modal-profile-transfer'),message=$('profile-transfer-message'),error=$('profile-transfer-error');error?.classList.add('hidden');try{const transfer=await DB.getProfileTransfer(token);message.textContent=`Você recebeu o perfil ${transfer.displayName}. Deseja vincular este perfil à sua conta atual?`;modal?.classList.remove('hidden');}catch(e){if(firebase.auth().currentUser?.isAnonymous){toast('Entre em uma conta de jogador para abrir a transferência.','warn');openPlayerAccount();}else toast('❌ '+e.message,'err');}};
+  const acceptProfileTransfer=async()=>{const button=$('profile-transfer-accept'),error=$('profile-transfer-error');if(!pendingTransferToken)return;if(button)button.disabled=true;try{const profile=await DB.acceptProfileTransfer(pendingTransferToken);$('modal-profile-transfer')?.classList.add('hidden');history.replaceState(null,'',location.pathname);toast(`✅ Perfil ${profile.nick} vinculado à sua conta`);showTab('perfil');}catch(e){if(error){error.textContent=e.message;error.classList.remove('hidden');}}finally{if(button)button.disabled=false;}};
   const savePlayerAdmin = async () => {
     if(!Storage.isOwner()||!adminPlayerId)return;
     const adjustments={reason:$('player-adjust-reason')?.value||''};
@@ -1072,6 +1080,11 @@ const UI = (() => {
       renderJogadoresTab();
     } catch(e) { toast('❌ '+e.message,'err'); }
   };
+
+  const openPlayerAccount=()=>{$('player-account-error')?.classList.add('hidden');$('modal-player-account')?.classList.remove('hidden');setTimeout(()=>$('player-account-email')?.focus(),50);};
+  const closePlayerAccount=()=>$('modal-player-account')?.classList.add('hidden');
+  const submitPlayerAccount=async mode=>{const email=$('player-account-email')?.value.trim(),password=$('player-account-password')?.value||'',name=$('player-account-name')?.value.trim()||'',error=$('player-account-error'),buttons=[$('player-account-login'),$('player-account-register')];if(!email||password.length<6){error.textContent='Informe um e-mail válido e uma senha com pelo menos 6 caracteres.';error.classList.remove('hidden');return;}buttons.forEach(b=>{if(b)b.disabled=true;});try{if(mode==='register')await DB.registerPlayerAccount(email,password,name);else await DB.signInPlayer(email,password);closePlayerAccount();toast(mode==='register'?'✅ Conta criada':'✅ Conta acessada');renderPerfilTab();renderJogadoresTab();}catch(e){const messages={'auth/email-already-in-use':'Este e-mail já possui uma conta. Use Entrar.','auth/invalid-login-credentials':'E-mail ou senha incorretos.','auth/wrong-password':'E-mail ou senha incorretos.','auth/invalid-email':'E-mail inválido.','auth/credential-already-in-use':'Este e-mail já pertence a outra conta.'};error.textContent=messages[e.code]||e.message||'Não foi possível acessar a conta.';error.classList.remove('hidden');}finally{buttons.forEach(b=>{if(b)b.disabled=false;});}};
+  const signOutPlayerAccount=async()=>{try{await DB.signOutPlayer();toast('Você saiu da conta.');renderPerfilTab();renderJogadoresTab();}catch(e){toast('❌ '+e.message,'err');}};
 
   const openInviteModal = () => {
     const modal = $('modal-invite');
@@ -1442,6 +1455,12 @@ const UI = (() => {
     if (roomParam) hash = 'session=' + roomParam;
     if (!hash) return;
 
+    if(hash.startsWith('transfer=')){
+      const token=hash.slice(9).trim();
+      if(!/^[a-f0-9]{64}$/.test(token)){toast('❌ Link de transferência inválido.','err');return;}
+      openProfileTransfer(token);return;
+    }
+
     // Link de sessão: #session=ID
     if (hash.startsWith('session=')) {
       const sessionId = decodeURIComponent(hash.slice(8)).trim();
@@ -1482,7 +1501,7 @@ const UI = (() => {
     // Inicializa Firebase e registra callback de tempo real
     DB.setOnChange((scope) => {
       if (activeTab === 'partidas') renderSessions();
-      if (scope === 'tournament' && activeTab === 'torneio') renderTorneioTab();
+      if (activeTab === 'torneio') renderTorneioTab();
       if(activeTab==='jogadores')renderJogadoresTab();
       if(activeTab==='perfil')renderPerfilTab();
       if(activeTab==='rank')renderRankTab();
@@ -1509,6 +1528,7 @@ const UI = (() => {
       if (activeTab === 'partidas') renderSessions();
       if (activeTab === 'torneio') renderTorneioTab();
       if (activeTab === 'jogadores') renderJogadoresTab();
+      if(location.hash.startsWith('#transfer=')&&firebase.auth().currentUser&&!firebase.auth().currentUser.isAnonymous&&!Storage.isAdmin())setTimeout(handleHash,100);
     });
     $('modal-admin-close')?.addEventListener('click', () => $('modal-admin')?.classList.add('hidden'));
     $('btn-admin-login')?.addEventListener('click', submitAdminLogin);
@@ -1620,12 +1640,21 @@ const UI = (() => {
     // ── Jogadores: modais ──────────────────────────────────────────────────
     $('modal-register-close')?.addEventListener('click', closeRegisterModal);
     $('btn-do-register')?.addEventListener('click', doRegister);
+    $('player-account-close')?.addEventListener('click',closePlayerAccount);
+    $('player-account-login')?.addEventListener('click',()=>submitPlayerAccount('login'));
+    $('player-account-register')?.addEventListener('click',()=>submitPlayerAccount('register'));
+    $('player-account-password')?.addEventListener('keydown',e=>{if(e.key==='Enter')submitPlayerAccount('login');});
     $('modal-invite-close')?.addEventListener('click', closeInviteModal);
     $('btn-gen-invite')?.addEventListener('click', generateInviteLink);
     $('player-admin-close')?.addEventListener('click',closePlayerAdmin);
     $('btn-save-player-admin')?.addEventListener('click',savePlayerAdmin);
     $('btn-delete-player')?.addEventListener('click',deletePlayerAdmin);
+    $('btn-transfer-player')?.addEventListener('click',transferProfile);
+    $('btn-cancel-transfer')?.addEventListener('click',cancelProfileTransfer);
     $('btn-reset-player')?.addEventListener('click',resetPlayerAdmin);
+    $('profile-transfer-close')?.addEventListener('click',()=>$('modal-profile-transfer')?.classList.add('hidden'));
+    $('profile-transfer-decline')?.addEventListener('click',()=>$('modal-profile-transfer')?.classList.add('hidden'));
+    $('profile-transfer-accept')?.addEventListener('click',acceptProfileTransfer);
     $('modal-player-admin')?.addEventListener('click',e=>{if(e.target===$('modal-player-admin'))closePlayerAdmin();});
     $('customize-profile-close')?.addEventListener('click',closeCustomizeProfile);
     $('profile-customize-cancel')?.addEventListener('click',closeCustomizeProfile);
@@ -1692,6 +1721,8 @@ const UI = (() => {
     addTournamentTeam,
     // jogadores
     openProfile, closePlayerProfile, openCustomizeProfile, openPlayerAdmin, deletePlayer, openRegisterModal, openInviteModal, downloadPlayerCard, sharePlayerCard,
+    openPlayerAccount, signOutPlayerAccount,
+    transferProfile, cancelProfileTransfer, acceptProfileTransfer,
     grantAdmin,revokeAdmin,startNewSeason,deleteOfficialMatch,openCorrectMatch,copyMyAdminCode,
     closeRegisterModal, closeInviteModal, doRegister, generateInviteLink,
     // partidas

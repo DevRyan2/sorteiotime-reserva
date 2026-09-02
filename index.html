@@ -178,6 +178,19 @@
             </div>
         </div>
 
+        <!-- Modal: conta do jogador -->
+        <div class="modal-backdrop hidden" id="modal-player-account">
+            <div class="modal-box" style="max-width:460px" role="dialog" aria-modal="true" aria-labelledby="player-account-title">
+                <div class="modal-head"><div class="modal-title" id="player-account-title">👤 Conta do jogador</div><button class="modal-close" id="player-account-close" aria-label="Fechar">✕</button></div>
+                <p class="modal-description">Crie um acesso exclusivo para este site. Não usamos sua conta Google, não acessamos Gmail e você não deve informar a senha do seu e-mail.</p>
+                <div class="modal-field-group" id="player-account-name-group"><label class="field-label" for="player-account-name">Nome</label><input class="field-full" id="player-account-name" maxlength="60" autocomplete="name" placeholder="Seu nome"></div>
+                <div class="modal-field-group"><label class="field-label" for="player-account-email">Identificador em formato de e-mail</label><input class="field-full" id="player-account-email" type="email" maxlength="160" autocomplete="username" placeholder="jogador123@exemplo.com"><p class="hint">Não precisa entrar no Gmail nem confirmar esse endereço.</p></div>
+                <div class="modal-field-group"><label class="field-label" for="player-account-password">Crie uma senha somente para este site</label><input class="field-full" id="player-account-password" type="password" minlength="6" maxlength="80" autocomplete="current-password" placeholder="Mínimo de 6 caracteres"><p class="hint">Nunca use aqui a senha da sua conta Google.</p></div>
+                <p class="field-error hidden" id="player-account-error"></p>
+                <div class="btn-bar"><button class="btn btn-secondary" id="player-account-login">Entrar</button><button class="btn btn-primary" id="player-account-register">Criar conta</button></div>
+            </div>
+        </div>
+
         <!-- Modal: Gerar convite -->
         <div class="modal-backdrop hidden" id="modal-invite">
             <div class="modal-box">
@@ -808,7 +821,7 @@
         <div class="modal-backdrop hidden" id="modal-customize-profile">
             <div class="modal-box" style="max-width:500px" role="dialog" aria-modal="true" aria-labelledby="customize-profile-title">
                 <div class="modal-head"><div class="modal-title" id="customize-profile-title">🎨 Personalizar perfil</div><button class="modal-close" id="customize-profile-close" aria-label="Fechar">✕</button></div>
-                <div class="profile-photo-editor"><div class="profile-photo-preview" id="profile-photo-preview">?</div><div><label class="btn btn-secondary btn-sm" for="profile-photo-input">Escolher da galeria</label><input id="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" hidden><button class="btn btn-ghost btn-sm" id="profile-photo-remove" type="button">Remover foto</button><p class="hint">JPG, PNG ou WebP. A imagem será comprimida automaticamente.</p></div></div>
+                <div class="profile-photo-editor"><div class="profile-photo-preview" id="profile-photo-preview">?</div><div><label class="btn btn-secondary btn-sm" for="profile-photo-input">Escolher da galeria</label><input id="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" hidden><button class="btn btn-ghost btn-sm" id="profile-photo-remove" type="button">Remover foto</button><p class="hint">JPG, PNG ou WebP, até 10 MB. A imagem será comprimida automaticamente.</p></div></div>
                 <div class="modal-field-group"><label class="field-label" for="profile-bio-input">Bio</label><textarea class="field-full" id="profile-bio-input" maxlength="160" rows="4" placeholder="Conte um pouco sobre você…"></textarea><div class="hint"><span id="profile-bio-count">0</span>/160</div></div>
                 <p class="field-error hidden" id="profile-customize-error"></p>
                 <div class="btn-bar"><button class="btn btn-secondary" id="profile-customize-cancel">Cancelar</button><button class="btn btn-primary" id="profile-customize-save">Salvar perfil</button></div>
@@ -841,9 +854,20 @@
                 <p class="field-error hidden" id="player-admin-error"></p>
                 <div class="player-admin-actions">
                     <button class="btn btn-danger" id="btn-delete-player">🗑 Apagar perfil</button>
+                    <button class="btn btn-secondary" id="btn-transfer-player">🔗 Transferir perfil</button>
+                    <button class="btn btn-secondary" id="btn-cancel-transfer">Cancelar transferência</button>
                     <button class="btn btn-secondary" id="btn-reset-player">Zerar métricas</button>
                     <button class="btn btn-primary" id="btn-save-player-admin">Salvar alterações</button>
                 </div>
+            </div>
+        </div>
+
+        <div class="modal-backdrop hidden" id="modal-profile-transfer">
+            <div class="modal-box" style="max-width:500px" role="dialog" aria-modal="true" aria-labelledby="profile-transfer-title">
+                <div class="modal-head"><div class="modal-title" id="profile-transfer-title">🔗 Transferência de perfil</div><button class="modal-close" id="profile-transfer-close" aria-label="Fechar">✕</button></div>
+                <p class="modal-description" id="profile-transfer-message"></p>
+                <p class="field-error hidden" id="profile-transfer-error"></p>
+                <div class="btn-bar"><button class="btn btn-secondary" id="profile-transfer-decline">Agora não</button><button class="btn btn-primary" id="profile-transfer-accept">Vincular à minha conta</button></div>
             </div>
         </div>
 

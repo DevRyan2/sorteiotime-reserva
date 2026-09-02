@@ -104,6 +104,20 @@ Esta matriz é aplicada em `database.rules.json`; ocultar controles na interface
 - Sem login tradicional, a identidade do jogador depende da credencial anônima mantida pelo Firebase no navegador. Limpar todos os dados do site ou trocar de navegador cria outra identidade.
 - Copiar apenas `localStorage` não copia a autenticação e não transfere o perfil.
 - Perfis criados pelo sistema antigo não têm prova confiável de propriedade. A associação desses perfis precisa ser tratada manualmente pelo administrador.
+
+### Contas e reivindicação de perfis antigos
+
+Ative o provedor **E-mail/senha** em Authentication > Sign-in method. O jogador pode criar a conta sem perder um perfil anônimo já vinculado: o Firebase converte a credencial anônima mantendo o mesmo UID. Perfis recuperados com `ownerUid: "RECOVERY_UNCLAIMED"` não podem ser reivindicados por membros; somente o DONO inicia uma transferência e envia o link seguro ao destinatário.
+
+A aprovação preserva o UUID do jogador e altera atomicamente apenas `ownerUid`, `userProfiles/{uid}` e o status do pedido. Partidas, estatísticas, ajustes e histórico não são copiados nem recriados. Publique `database.rules.json` antes de liberar o recurso.
+
+### Transferência por link
+
+Somente `role: "owner"` pode gerar, renovar ou cancelar um link de transferência. O token possui 256 bits aleatórios, uso único e validade de sete dias. O destinatário precisa estar em uma conta comum, mas não precisa confirmar o e-mail. Contas com `role: "admin"` são bloqueadas tanto na interface quanto nas regras do Realtime Database.
+
+Partidas novas armazenam `teamPlayerIds`, `mvpPlayerId` e resultados indexados por `playerId`. Torneios versão 5 armazenam `memberIds` e IDs nos resultados. Registros antigos continuam compatíveis e recebem IDs quando carregados/editados; a exibição sempre procura o nome atual em `/players/{playerId}`. `/playerAliases` mantém a associação segura dos nicks anteriores ao mesmo ID e impede que um nome histórico seja reutilizado por outro perfil.
+
+As fotos são comprimidas no navegador e persistidas no campo `avatar` do perfil (JPG em Data URL, até 180.000 caracteres). Arquivos aceitos: JPEG, PNG e WebP de até 10 MB.
 - Limitação e detecção de abuso por IP/dispositivo exigem infraestrutura adicional, como Firebase App Check e uma Cloud Function ou backend confiável. Regras do Realtime Database não são um rate limiter completo.
 
 ## Desenvolvimento local
@@ -116,6 +130,7 @@ Antes de publicar:
 2. confirme que o provedor Anônimo está ativo;
 3. publique `database.rules.json`;
 4. teste criação de perfil, reserva de nick, confirmação e finalização de partida.
+5. execute `node tests/regression.js` e teste a criação/login da conta, solicitação e aprovação de um perfil recuperado.
 
 ## Estrutura
 

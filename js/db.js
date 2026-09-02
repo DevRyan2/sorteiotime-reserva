@@ -1,7 +1,7 @@
 // db.js — camada de dados em tempo real (Firebase Realtime Database)
 const DB = (() => {
   let _db = null, _ready = false, _usingFallback = false;
-  let _cache = {}, _tournamentCache = null, _onChange = null, _playersById = {}, _matchesCache = [], _statAdjustments = {}, _season=null, _seasonResets={}, _roleRef=null;
+  let _cache = {}, _rawSessions = {}, _tournamentCache = null, _onChange = null, _playersById = {}, _playerAliases = {}, _matchesCache = [], _statAdjustments = {}, _season=null, _seasonResets={}, _roleRef=null;
 
   const init = () => {
     const cfg = window.FIREBASE_CONFIG;
@@ -27,13 +27,12 @@ const DB = (() => {
           const role=snap.val();Storage.setRole(role==='owner'||role==='admin'?role:'player');
           window.dispatchEvent(new CustomEvent('ff-auth-change'));
         },()=>{Storage.setRole('player');window.dispatchEvent(new CustomEvent('ff-auth-change'));});
-        if(user.isAnonymous)_loadMyProfile(user.uid).catch(()=>{});
+        _loadMyProfile(user.uid).catch(()=>{});
       });
 
       _db.ref('sessions').on('value', snap => {
-        const raw = snap.val() || {};
-        Object.keys(raw).forEach(id => { raw[id].confirmed = _normalizeConfirmed(raw[id].confirmed); });
-        _cache = raw; _ready = true;
+        _rawSessions = snap.val() || {};
+        _refreshSessionCache(); _ready = true;
         if (_onChange) _onChange();
       }, err => {
         console.error('[DB] Firebase error:', err);
@@ -53,12 +52,14 @@ const DB = (() => {
         localStorage.removeItem('ff_players'); localStorage.removeItem('ff_matches');
         _db.ref('players').on('value', snap => {
           _playersById = snap.val() || {};
+          _refreshSessionCache();
           _rebuildPlayerCache();
           if (_onChange) _onChange();
         });
+        _db.ref('playerAliases').on('value',snap=>{_playerAliases=snap.val()||{};_refreshSessionCache();_rebuildPlayerCache();if(_onChange)_onChange('players');});
         _db.ref('matches').on('value', snap => {
           const raw = snap.val() || {};
-          _matchesCache = Object.values(raw).sort((a,b) => (b.createdAt||b.date||0) - (a.createdAt||a.date||0));
+          _matchesCache = Object.values(raw).map(_displayMatch).sort((a,b) => (b.createdAt||b.date||0) - (a.createdAt||a.date||0));
           Storage.setRuntimeMatches(_matchesCache);
           _rebuildPlayerCache();
           if (_onChange) _onChange();
@@ -81,8 +82,9 @@ const DB = (() => {
   const _normalizeConfirmed = (raw) => {
     if (!raw) return [];
     if (Array.isArray(raw)) return raw;
-    return Object.values(raw).sort((a,b)=>(a.addedAt||0)-(b.addedAt||0)).map(v=>typeof v==='string'?v:v.nick);
+    return Object.values(raw).sort((a,b)=>(a.addedAt||0)-(b.addedAt||0)).map(v=>typeof v==='string'?v:getPlayerName(v.playerId,v.nick));
   };
+  const _refreshSessionCache=()=>{_cache=Object.fromEntries(Object.entries(_rawSessions).map(([id,source])=>{const s=structuredClone(source),entries=Object.values(source.confirmed||{}),oldToId=new Map(entries.filter(v=>v&&typeof v==='object').map(v=>[String(v.nick).toLocaleLowerCase('pt-BR'),v.playerId]));s.confirmed=_normalizeConfirmed(source.confirmed);if(Array.isArray(s.teams)){s.teamPlayerIds=Array.isArray(s.teamPlayerIds)?s.teamPlayerIds:s.teams.map(team=>team.map(name=>oldToId.get(String(name).toLocaleLowerCase('pt-BR'))||getPlayerIdByNick(name)));s.teams=s.teams.map((team,ti)=>team.map((name,i)=>getPlayerName(s.teamPlayerIds?.[ti]?.[i],name)));}return[id,s];}));};
 
   const _loadFallback = () => {
     try {
@@ -134,7 +136,7 @@ const DB = (() => {
 
   const getMyProfile = async () => {
     const user = firebase.auth().currentUser;
-    if (!user || user.email) return null;
+    if (!user || Storage.isAdmin()) return null;
     return _loadMyProfile(user.uid);
   };
 
@@ -143,7 +145,7 @@ const DB = (() => {
     const valid = validateNick(rawNick); if (!valid.ok) throw new Error(valid.message);
     let user = firebase.auth().currentUser;
     if (!user) { await firebase.auth().signInAnonymously(); user=firebase.auth().currentUser; }
-    if (user.email) throw new Error('Saia do painel admin para criar um perfil de jogador.');
+    if (Storage.isAdmin()) throw new Error('Saia do painel admin para criar um perfil de jogador.');
     if ((await _db.ref(`userProfiles/${user.uid}`).once('value')).exists()) return _loadMyProfile(user.uid);
     const playerId = crypto.randomUUID();
     const profile = { id:playerId, nick:valid.nick, nickKey:valid.key, ownerUid:user.uid, createdAt:firebase.database.ServerValue.TIMESTAMP };
@@ -160,16 +162,29 @@ const DB = (() => {
     const user=firebase.auth().currentUser, current=await getMyProfile();
     if(!user||!current) throw new Error('Perfil não encontrado neste dispositivo.');
     if(current.nickKey===valid.key) return current;
+    if(_playerAliases[valid.key]&&_playerAliases[valid.key]!==current.id)throw new Error('Esse nick pertence ao histórico de outro jogador.');
     try {
-      await _db.ref().update({ [`nickClaims/${current.nickKey}`]:null, [`nickClaims/${valid.key}`]:current.id, [`players/${current.id}/nick`]:valid.nick, [`players/${current.id}/nickKey`]:valid.key });
+      await _db.ref().update({ [`playerAliases/${current.nickKey}`]:current.id,[`nickClaims/${current.nickKey}`]:null, [`nickClaims/${valid.key}`]:current.id, [`players/${current.id}/nick`]:valid.nick, [`players/${current.id}/nickKey`]:valid.key });
     } catch(e){ if(e?.code==='PERMISSION_DENIED') throw new Error('Esse nick já está em uso. Escolha outro.'); throw e; }
     Storage.setMyNick(valid.nick); return { ...current,nick:valid.nick,nickKey:valid.key };
   };
 
-  const updateMyProfile=async({bio,avatar})=>{if(_usingFallback)throw new Error('Personalização exige Firebase.');const user=firebase.auth().currentUser,current=await getMyProfile();if(!user?.isAnonymous||!current||current.ownerUid!==user.uid)throw new Error('Este perfil não está vinculado a este dispositivo.');const cleanBio=String(bio||'').trim().replace(/\s+/g,' ').slice(0,160);if(/[<>`]/.test(cleanBio))throw new Error('A bio contém caracteres não permitidos.');if(avatar!==null&&avatar!==undefined&&(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar)||avatar.length>180000))throw new Error('Imagem inválida ou muito grande.');const updates={bio:cleanBio||null};if(avatar!==undefined)updates.avatar=avatar||null;await _db.ref(`players/${current.id}`).update(updates);return {...current,...updates};};
+  const updateMyProfile=async({bio,avatar})=>{if(_usingFallback)throw new Error('Personalização exige Firebase.');const user=firebase.auth().currentUser,current=await getMyProfile();if(!user||Storage.isAdmin()||!current||current.ownerUid!==user.uid)throw new Error('Este perfil não está vinculado à sua conta.');const cleanBio=String(bio||'').trim().replace(/\s+/g,' ').slice(0,160);if(/[<>`]/.test(cleanBio))throw new Error('A bio contém caracteres não permitidos.');if(avatar!==null&&avatar!==undefined&&(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar)||avatar.length>180000))throw new Error('Imagem inválida ou muito grande.');const updates={bio:cleanBio||null};if(avatar!==undefined)updates.avatar=avatar||null;try{await _db.ref(`players/${current.id}`).update(updates);}catch(e){throw _friendlyWriteError(e);}return {...current,...updates};};
 
-  const getPlayerIdByNick = nick => Object.entries(_playersById).find(([,p]) => p.nick?.toLocaleLowerCase('pt-BR') === String(nick).toLocaleLowerCase('pt-BR'))?.[0] || null;
+  const registerPlayerAccount=async(email,password,name)=>{const auth=firebase.auth(),current=auth.currentUser,credential=firebase.auth.EmailAuthProvider.credential(String(email).trim(),password);let user;if(current?.isAnonymous){user=(await current.linkWithCredential(credential)).user;}else{user=(await auth.createUserWithEmailAndPassword(String(email).trim(),password)).user;}const displayName=String(name||'').trim().slice(0,60);if(displayName)await user.updateProfile({displayName});await user.getIdToken(true);window.dispatchEvent(new CustomEvent('ff-auth-change'));return user;};
+  const signInPlayer=async(email,password)=>{const user=(await firebase.auth().signInWithEmailAndPassword(String(email).trim(),password)).user;const role=(await _db.ref(`roles/${user.uid}/role`).once('value')).val();if(role==='admin'||role==='owner'){await firebase.auth().signOut();throw new Error('Use o acesso administrativo para esta conta.');}return user;};
+  const signOutPlayer=async()=>{await firebase.auth().signOut();Storage.setMyNick(null);};
+
+  const getPlayerIdByNick = nick => Object.entries(_playersById).find(([,p]) => p.nick?.toLocaleLowerCase('pt-BR') === String(nick).toLocaleLowerCase('pt-BR'))?.[0] || _playerAliases[nickKey(nick)] || null;
   const getPlayerById = id => _playersById[id] ? { ..._playersById[id],id,adjustments:_statAdjustments[id]||{} } : null;
+  const getPlayerName = (id,fallback='Jogador') => _playersById[id]?.nick || fallback;
+  const _displayMatch=match=>{const results=Object.fromEntries(Object.entries(match.playerResults||{}).map(([id,row])=>[id,{...row,nick:getPlayerName(id,row.nick)}]));const oldNameToId=new Map(Object.entries(match.playerResults||{}).map(([id,row])=>[String(row.nick||'').toLocaleLowerCase('pt-BR'),id]));const teamIds=Array.isArray(match.teamPlayerIds)?match.teamPlayerIds:(match.teams||[]).map(team=>(team||[]).map(name=>oldNameToId.get(String(name).toLocaleLowerCase('pt-BR'))||null));const teams=(match.teams||[]).map((team,ti)=>(team||[]).map((name,i)=>getPlayerName(teamIds?.[ti]?.[i],name)));const mvpId=match.mvpPlayerId||Object.entries(match.playerResults||{}).find(([,row])=>row.mvp)?.[0]||null;return {...match,teams,teamPlayerIds:teamIds,playerResults:results,mvp:mvpId?getPlayerName(mvpId,match.mvp):match.mvp,mvpPlayerId:mvpId};};
+
+  const _randomToken=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
+  const createProfileTransfer=async playerId=>{await _requireOwnerAuth();const player=_playersById[playerId];if(!player)throw new Error('Perfil não encontrado.');const previous=(await _db.ref(`activeProfileTransfers/${playerId}`).once('value')).val(),token=_randomToken(),now=Date.now(),transfer={token,playerId,displayName:player.nick,previousOwnerUid:player.ownerUid,createdBy:firebase.auth().currentUser.uid,createdAt:now,expiresAt:now+604800000,status:'pending'};const updates={[`profileTransfers/${token}`]:transfer,[`activeProfileTransfers/${playerId}`]:token};if(previous){updates[`profileTransfers/${previous}/status`]='cancelled';updates[`profileTransfers/${previous}/cancelledAt`]=now;}_auditUpdate(updates,'profile_transfer_created',{playerId,tokenSuffix:token.slice(-8)});await _db.ref().update(updates);return transfer;};
+  const cancelProfileTransfer=async playerId=>{await _requireOwnerAuth();const token=(await _db.ref(`activeProfileTransfers/${playerId}`).once('value')).val();if(!token)throw new Error('Não existe transferência ativa.');const now=Date.now(),updates={[`activeProfileTransfers/${playerId}`]:null,[`profileTransfers/${token}/status`]:'cancelled',[`profileTransfers/${token}/cancelledAt`]:now};_auditUpdate(updates,'profile_transfer_cancelled',{playerId,tokenSuffix:token.slice(-8)});await _db.ref().update(updates);};
+  const getProfileTransfer=async token=>{const user=firebase.auth().currentUser;if(!user||user.isAnonymous)throw new Error('Entre em uma conta de jogador para receber o perfil.');if(!/^[a-f0-9]{64}$/.test(token))throw new Error('Link de transferência inválido.');const transfer=(await _db.ref(`profileTransfers/${token}`).once('value')).val();if(!transfer||transfer.status!=='pending'||transfer.expiresAt<Date.now())throw new Error('Este link é inválido, expirou ou foi cancelado.');const player=(await _db.ref(`players/${transfer.playerId}`).once('value')).val();if(!player)throw new Error('Perfil não encontrado.');return {...transfer,displayName:player.nick};};
+  const acceptProfileTransfer=async token=>{const user=firebase.auth().currentUser;if(!user||user.isAnonymous||Storage.isAdmin())throw new Error('Entre em uma conta comum para receber o perfil.');const transfer=await getProfileTransfer(token),existing=(await _db.ref(`userProfiles/${user.uid}`).once('value')).val();if(existing&&existing!==transfer.playerId)throw new Error('Sua conta já controla outro perfil.');await _db.ref(`profileTransferAcceptances/${token}/${user.uid}`).set(true);const now=Date.now(),updates={[`players/${transfer.playerId}/ownerUid`]:user.uid,[`userProfiles/${user.uid}`]:transfer.playerId,[`profileTransfers/${token}/status`]:'accepted',[`profileTransfers/${token}/acceptedAt`]:now,[`profileTransfers/${token}/acceptedBy`]:user.uid,[`activeProfileTransfers/${transfer.playerId}`]:null};if(transfer.previousOwnerUid&&transfer.previousOwnerUid!=='RECOVERY_UNCLAIMED'&&transfer.previousOwnerUid!==user.uid)updates[`userProfiles/${transfer.previousOwnerUid}`]=null;await _db.ref().update(updates);await _loadMyProfile(user.uid);return getPlayerById(transfer.playerId);};
 
   const isReady         = () => _ready;
   const isUsingFallback = () => _usingFallback;
@@ -224,6 +239,7 @@ const DB = (() => {
 
   const updateSession = async (id, updates) => {
     const s = _cache[id]; if(!s) return null;
+    if(Array.isArray(updates.teams)&&!Array.isArray(updates.teamPlayerIds))updates={...updates,teamPlayerIds:updates.teams.map(team=>team.map(getPlayerIdByNick))};
     _cache[id] = {...s, ...updates};
     if (_usingFallback) { _saveFallback(); if(_onChange)_onChange(); return _cache[id]; }
     await _requireAdminAuth();
@@ -291,17 +307,15 @@ const DB = (() => {
     await _requireOwnerAuth();
     const current=_playersById[playerId];if(!current)throw new Error('Perfil não encontrado.');
     const valid=validateNick(nick);if(!valid.ok)throw new Error(valid.message);
+    if(_playerAliases[valid.key]&&_playerAliases[valid.key]!==playerId)throw new Error('Esse nick pertence ao histórico de outro jogador.');
     const allowed=['points','wins','losses','kills','mvps'], clean={};
     allowed.forEach(key=>{const value=Number(adjustments?.[key]||0);if(!Number.isInteger(value)||Math.abs(value)>10000)throw new Error('Ajustes devem ser números inteiros entre -10000 e 10000.');clean[key]=value;});
     clean.reason=String(adjustments?.reason||'').trim().slice(0,120);clean.updatedAt=Date.now();
     const updates={[`statAdjustments/${playerId}`]:clean};
     if(valid.key!==current.nickKey){
-      updates[`nickClaims/${current.nickKey}`]=null;updates[`nickClaims/${valid.key}`]=playerId;updates[`players/${playerId}/nick`]=valid.nick;updates[`players/${playerId}/nickKey`]=valid.key;
-      const sessions=(await _db.ref('sessions').once('value')).val()||{};
-      Object.entries(sessions).forEach(([sessionId,session])=>{
-        if(session.confirmed?.[playerId])updates[`sessions/${sessionId}/confirmed/${playerId}/nick`]=valid.nick;
-        if(Array.isArray(session.teams))updates[`sessions/${sessionId}/teams`]=session.teams.map(team=>Array.isArray(team)?team.map(name=>name===current.nick?valid.nick:name):team);
-      });
+      updates[`playerAliases/${current.nickKey}`]=playerId;updates[`nickClaims/${current.nickKey}`]=null;updates[`nickClaims/${valid.key}`]=playerId;updates[`players/${playerId}/nick`]=valid.nick;updates[`players/${playerId}/nickKey`]=valid.key;
+      const tournament=(await _db.ref('tournament').once('value')).val();
+      if(tournament){const visitTeam=team=>{if(!team||!Array.isArray(team.members))return;if(!Array.isArray(team.memberIds))team.memberIds=team.members.map(getPlayerIdByNick);if(team.memberIds.includes(playerId)&&team.name===`Equipe ${current.nick}`)team.name=`Equipe ${valid.nick}`;};(tournament.teams||[]).forEach(visitTeam);(tournament.rounds||[]).forEach(round=>{(round.matches||[]).forEach(match=>{visitTeam(match.t1);visitTeam(match.t2);visitTeam(match.winner);if(match.result){(match.result.kills||[]).forEach(entry=>{entry.playerId=entry.playerId||getPlayerIdByNick(entry.player);});match.result.mvpPlayerIds=match.result.mvpPlayerIds||(match.result.mvps||[]).map(getPlayerIdByNick);}});(round.carried||[]).forEach(visitTeam);visitTeam(round.directAdvance);});visitTeam(tournament.champion);tournament.version=5;updates.tournament=tournament;}
     }
     _auditUpdate(updates,'player_adjusted',{playerId,nick:valid.nick,adjustments:clean});try{await _db.ref().update(updates);}catch(e){if(e?.code==='PERMISSION_DENIED')throw new Error('Nick já utilizado ou regras administrativas não publicadas.');throw e;}
     return true;
@@ -325,7 +339,8 @@ const DB = (() => {
     const resultRows=flat.map(nick=>({ playerId:getPlayerIdByNick(nick), nick, kills:kills.find(k=>k.player===nick).kills, won:teams[result.winner].includes(nick), mvp:result.mvp===nick }));
     if(resultRows.some(r=>!r.playerId)) throw new Error('Todos os participantes precisam possuir um perfil válido.');
     const playerResults=Object.fromEntries(resultRows.map(row=>[row.playerId,row]));
-    const match={ id:matchId,sessionId,eventName:session.eventName||'Partida',teams,winner:result.winner,mvp:result.mvp||null,playerResults,date:now,createdAt:now,season:_season?.id||Storage.getCurrentSeason(),finalizedBy:firebase.auth().currentUser.uid,status:'finalized' };
+    const teamPlayerIds=teams.map(team=>team.map(getPlayerIdByNick)),mvpPlayerId=result.mvp?getPlayerIdByNick(result.mvp):null;
+    const match={ id:matchId,sessionId,eventName:session.eventName||'Partida',teams,teamPlayerIds,winner:result.winner,mvp:result.mvp||null,mvpPlayerId,playerResults,date:now,createdAt:now,season:_season?.id||Storage.getCurrentSeason(),finalizedBy:firebase.auth().currentUser.uid,status:'finalized' };
     const updates={ [`matches/${matchId}`]:match,[`sessions/${sessionId}/status`]:'closed',[`sessions/${sessionId}/closedAt`]:now,[`sessions/${sessionId}/matchId`]:matchId };_auditUpdate(updates,'match_finalized',{matchId,sessionId,winner:result.winner,mvp:result.mvp||null,kills});await _db.ref().update(updates);
     return match;
   };
@@ -381,6 +396,8 @@ const DB = (() => {
     deletePlayer, savePlayerAdmin, getPlayerById,
     finalizeSession, deleteOfficialMatch, correctOfficialMatch,
     validateNick, createMyProfile, changeMyNick, updateMyProfile, getMyProfile, getPlayerIdByNick, signInStaff,
+    registerPlayerAccount, signInPlayer, signOutPlayer,
+    getPlayerName, createProfileTransfer, cancelProfileTransfer, getProfileTransfer, acceptProfileTransfer,
     setAdminRole, removeAdminRole, getRoles, getAuditLog, resetPlayerSeason, startNewSeason,
     getTournament, saveTournament, clearTournament,
   };
