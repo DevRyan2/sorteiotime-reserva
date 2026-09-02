@@ -41,12 +41,17 @@ assert.throws(() => approve(state, 'user-rc7'), /pendentes/, 'o mesmo pedido nã
 
 const dbSource = fs.readFileSync('js/db.js', 'utf8');
 const appSource = fs.readFileSync('js/app.js', 'utf8');
+const storageSource = fs.readFileSync('js/storage.js', 'utf8');
 const rules = fs.readFileSync('database.rules.json', 'utf8');
 assert.match(dbSource, /avatar\.length>180000/);
 assert.match(appSource, /createImageBitmap'in window/);
 assert.doesNotMatch(appSource, /Reivindicar este perfil|requestProfileClaim/);
 assert.match(rules, /auth\.token\.email != null/);
 assert.match(rules, /root\.child\('roles'\).*'admin'/);
+assert.match(storageSource, /authorizedRole/);
+assert.match(storageSource, /setAdminMode/);
+const toggleAdminSource=appSource.match(/const toggleAdmin[\s\S]*?const submitAdminLogin/)?.[0]||'';
+assert.doesNotMatch(toggleAdminSource,/signOut\(/,'desativar o modo ADM não pode encerrar a conta nem trocar o UID');
 
 const historicalMatch = {
   teams: [['Maria'], ['RC7']],

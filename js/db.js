@@ -17,16 +17,16 @@ const DB = (() => {
       firebase.auth().onAuthStateChanged(async user => {
         if(_roleRef){_roleRef.off();_roleRef=null;}
         if (!user) {
-          Storage.setRole('player');
+          Storage.setAuthorizedRole('player');
           window.dispatchEvent(new CustomEvent('ff-auth-change'));
           try { await firebase.auth().signInAnonymously(); } catch(e) { console.error('[Auth] Anonymous sign-in:', e); }
           return;
         }
         _roleRef=_db.ref(`roles/${user.uid}/role`);
         _roleRef.on('value',snap=>{
-          const role=snap.val();Storage.setRole(role==='owner'||role==='admin'?role:'player');
+          const role=snap.val();Storage.setAuthorizedRole(role==='owner'||role==='admin'?role:'player');
           window.dispatchEvent(new CustomEvent('ff-auth-change'));
-        },()=>{Storage.setRole('player');window.dispatchEvent(new CustomEvent('ff-auth-change'));});
+        },()=>{Storage.setAuthorizedRole('player');window.dispatchEvent(new CustomEvent('ff-auth-change'));});
         _loadMyProfile(user.uid).catch(()=>{});
       });
 
@@ -136,7 +136,7 @@ const DB = (() => {
 
   const getMyProfile = async () => {
     const user = firebase.auth().currentUser;
-    if (!user || Storage.isAdmin()) return null;
+    if (!user || Storage.getRole()==='admin') return null;
     return _loadMyProfile(user.uid);
   };
 
@@ -169,10 +169,10 @@ const DB = (() => {
     Storage.setMyNick(valid.nick); return { ...current,nick:valid.nick,nickKey:valid.key };
   };
 
-  const updateMyProfile=async({bio,avatar})=>{if(_usingFallback)throw new Error('Personalização exige Firebase.');const user=firebase.auth().currentUser,current=await getMyProfile();if(!user||Storage.isAdmin()||!current||current.ownerUid!==user.uid)throw new Error('Este perfil não está vinculado à sua conta.');const cleanBio=String(bio||'').trim().replace(/\s+/g,' ').slice(0,160);if(/[<>`]/.test(cleanBio))throw new Error('A bio contém caracteres não permitidos.');if(avatar!==null&&avatar!==undefined&&(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar)||avatar.length>180000))throw new Error('Imagem inválida ou muito grande.');const updates={bio:cleanBio||null};if(avatar!==undefined)updates.avatar=avatar||null;try{await _db.ref(`players/${current.id}`).update(updates);}catch(e){throw _friendlyWriteError(e);}return {...current,...updates};};
+  const updateMyProfile=async({bio,avatar})=>{if(_usingFallback)throw new Error('Personalização exige Firebase.');const user=firebase.auth().currentUser,current=await getMyProfile();if(!user||Storage.getRole()==='admin'||!current||current.ownerUid!==user.uid)throw new Error('Este perfil não está vinculado à sua conta.');const cleanBio=String(bio||'').trim().replace(/\s+/g,' ').slice(0,160);if(/[<>`]/.test(cleanBio))throw new Error('A bio contém caracteres não permitidos.');if(avatar!==null&&avatar!==undefined&&(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar)||avatar.length>180000))throw new Error('Imagem inválida ou muito grande.');const updates={bio:cleanBio||null};if(avatar!==undefined)updates.avatar=avatar||null;try{await _db.ref(`players/${current.id}`).update(updates);}catch(e){throw _friendlyWriteError(e);}return {...current,...updates};};
 
   const registerPlayerAccount=async(email,password,name)=>{const auth=firebase.auth(),current=auth.currentUser,credential=firebase.auth.EmailAuthProvider.credential(String(email).trim(),password);let user;if(current?.isAnonymous){user=(await current.linkWithCredential(credential)).user;}else{user=(await auth.createUserWithEmailAndPassword(String(email).trim(),password)).user;}const displayName=String(name||'').trim().slice(0,60);if(displayName)await user.updateProfile({displayName});await user.getIdToken(true);window.dispatchEvent(new CustomEvent('ff-auth-change'));return user;};
-  const signInPlayer=async(email,password)=>{const user=(await firebase.auth().signInWithEmailAndPassword(String(email).trim(),password)).user;const role=(await _db.ref(`roles/${user.uid}/role`).once('value')).val();if(role==='admin'||role==='owner'){await firebase.auth().signOut();throw new Error('Use o acesso administrativo para esta conta.');}return user;};
+  const signInPlayer=async(email,password)=>{const user=(await firebase.auth().signInWithEmailAndPassword(String(email).trim(),password)).user;const role=(await _db.ref(`roles/${user.uid}/role`).once('value')).val();if(role==='admin'){await firebase.auth().signOut();throw new Error('Administradores comuns devem usar o painel administrativo.');}return user;};
   const sendPlayerPasswordReset=async email=>{const clean=String(email||'').trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean))throw new Error('Informe o identificador usado para entrar.');await firebase.auth().sendPasswordResetEmail(clean);};
   const signOutPlayer=async()=>{await firebase.auth().signOut();Storage.setMyNick(null);};
 
@@ -185,7 +185,7 @@ const DB = (() => {
   const createProfileTransfer=async playerId=>{await _requireOwnerAuth();const player=_playersById[playerId];if(!player)throw new Error('Perfil não encontrado.');const previous=(await _db.ref(`activeProfileTransfers/${playerId}`).once('value')).val(),token=_randomToken(),now=Date.now(),transfer={token,playerId,displayName:player.nick,previousOwnerUid:player.ownerUid,createdBy:firebase.auth().currentUser.uid,createdAt:now,expiresAt:now+604800000,status:'pending'};const updates={[`profileTransfers/${token}`]:transfer,[`activeProfileTransfers/${playerId}`]:token};if(previous){updates[`profileTransfers/${previous}/status`]='cancelled';updates[`profileTransfers/${previous}/cancelledAt`]=now;}_auditUpdate(updates,'profile_transfer_created',{playerId,tokenSuffix:token.slice(-8)});await _db.ref().update(updates);return transfer;};
   const cancelProfileTransfer=async playerId=>{await _requireOwnerAuth();const token=(await _db.ref(`activeProfileTransfers/${playerId}`).once('value')).val();if(!token)throw new Error('Não existe transferência ativa.');const now=Date.now(),updates={[`activeProfileTransfers/${playerId}`]:null,[`profileTransfers/${token}/status`]:'cancelled',[`profileTransfers/${token}/cancelledAt`]:now};_auditUpdate(updates,'profile_transfer_cancelled',{playerId,tokenSuffix:token.slice(-8)});await _db.ref().update(updates);};
   const getProfileTransfer=async token=>{const user=firebase.auth().currentUser;if(!user||user.isAnonymous)throw new Error('Entre em uma conta de jogador para receber o perfil.');if(!/^[a-f0-9]{64}$/.test(token))throw new Error('Link de transferência inválido.');const transfer=(await _db.ref(`profileTransfers/${token}`).once('value')).val();if(!transfer||transfer.status!=='pending'||transfer.expiresAt<Date.now())throw new Error('Este link é inválido, expirou ou foi cancelado.');const player=(await _db.ref(`players/${transfer.playerId}`).once('value')).val();if(!player)throw new Error('Perfil não encontrado.');return {...transfer,displayName:player.nick};};
-  const acceptProfileTransfer=async token=>{const user=firebase.auth().currentUser;if(!user||user.isAnonymous||Storage.isAdmin())throw new Error('Entre em uma conta comum para receber o perfil.');const transfer=await getProfileTransfer(token),existing=(await _db.ref(`userProfiles/${user.uid}`).once('value')).val();if(existing&&existing!==transfer.playerId)throw new Error('Sua conta já controla outro perfil.');await _db.ref(`profileTransferAcceptances/${token}/${user.uid}`).set(true);const now=Date.now(),updates={[`players/${transfer.playerId}/ownerUid`]:user.uid,[`userProfiles/${user.uid}`]:transfer.playerId,[`profileTransfers/${token}/status`]:'accepted',[`profileTransfers/${token}/acceptedAt`]:now,[`profileTransfers/${token}/acceptedBy`]:user.uid,[`activeProfileTransfers/${transfer.playerId}`]:null};if(transfer.previousOwnerUid&&transfer.previousOwnerUid!=='RECOVERY_UNCLAIMED'&&transfer.previousOwnerUid!==user.uid)updates[`userProfiles/${transfer.previousOwnerUid}`]=null;await _db.ref().update(updates);await _loadMyProfile(user.uid);return getPlayerById(transfer.playerId);};
+  const acceptProfileTransfer=async token=>{const user=firebase.auth().currentUser,role=Storage.getRole();if(!user||user.isAnonymous||role==='admin')throw new Error('Entre em uma conta de jogador para receber o perfil.');const transfer=await getProfileTransfer(token),existing=(await _db.ref(`userProfiles/${user.uid}`).once('value')).val();if(existing&&existing!==transfer.playerId)throw new Error('Sua conta já controla outro perfil.');if(role!=='owner')await _db.ref(`profileTransferAcceptances/${token}/${user.uid}`).set(true);const now=Date.now(),updates={[`players/${transfer.playerId}/ownerUid`]:user.uid,[`userProfiles/${user.uid}`]:transfer.playerId,[`profileTransfers/${token}/status`]:'accepted',[`profileTransfers/${token}/acceptedAt`]:now,[`profileTransfers/${token}/acceptedBy`]:user.uid,[`activeProfileTransfers/${transfer.playerId}`]:null};if(transfer.previousOwnerUid&&transfer.previousOwnerUid!=='RECOVERY_UNCLAIMED'&&transfer.previousOwnerUid!==user.uid)updates[`userProfiles/${transfer.previousOwnerUid}`]=null;await _db.ref().update(updates);await _loadMyProfile(user.uid);return getPlayerById(transfer.playerId);};
 
   const isReady         = () => _ready;
   const isUsingFallback = () => _usingFallback;
@@ -196,7 +196,7 @@ const DB = (() => {
     const user = firebase.auth().currentUser;
     const role=user?(await _db.ref(`roles/${user.uid}/role`).once('value')).val():null;
     if (!user || (role!=='admin'&&role!=='owner')) {
-      Storage.setRole('player');
+      Storage.setAuthorizedRole('player');
       window.dispatchEvent(new CustomEvent('ff-auth-change'));
       throw new Error('A sessão de admin expirou. Entre novamente no painel.');
     }
@@ -204,11 +204,11 @@ const DB = (() => {
     // Atualiza o token antes de operações protegidas. Isso evita que uma
     // troca recente do usuário anônimo para o admin use credenciais antigas.
     await user.getIdToken(true);
-    Storage.setRole(role);
+    Storage.setAuthorizedRole(role);
     return user;
   };
   const _requireOwnerAuth=async()=>{const user=await _requireAdminAuth();if(Storage.getRole()!=='owner')throw new Error('Apenas o dono pode executar esta ação.');return user;};
-  const signInStaff=async(email,password)=>{try{const credential=await firebase.auth().signInWithEmailAndPassword(String(email).trim(),password);const role=(await _db.ref(`roles/${credential.user.uid}/role`).once('value')).val();if(role!=='admin'&&role!=='owner'){await firebase.auth().signOut();Storage.setRole('player');return false;}Storage.setRole(role);window.dispatchEvent(new CustomEvent('ff-auth-change'));return true;}catch{Storage.setRole('player');return false;}};
+  const signInStaff=async(email,password)=>{try{const credential=await firebase.auth().signInWithEmailAndPassword(String(email).trim(),password);const role=(await _db.ref(`roles/${credential.user.uid}/role`).once('value')).val();if(role!=='admin'&&role!=='owner'){await firebase.auth().signOut();Storage.setAuthorizedRole('player');return false;}Storage.setAuthorizedRole(role);if(role==='admin')Storage.setAdminMode(true);window.dispatchEvent(new CustomEvent('ff-auth-change'));return true;}catch{Storage.setAuthorizedRole('player');return false;}};
   const _auditUpdate=(updates,action,details={})=>{const user=firebase.auth().currentUser,key=_db.ref('auditLog').push().key;updates[`auditLog/${key}`]={actorUid:user.uid,role:Storage.getRole(),action,details,createdAt:Date.now()};};
 
   const _friendlyWriteError = error => {

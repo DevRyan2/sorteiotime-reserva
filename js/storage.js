@@ -7,6 +7,7 @@ const Storage = (() => {
     MATCHES:  'ff_matches',
     SESSIONS: 'ff_sessions',
     IS_ADMIN: 'ff_is_admin',
+    ADMIN_MODE:'ff_admin_mode',
     TOURNAMENT:'ff_tournament',
     SCORING_CONFIG:'ff_scoring_config',
   };
@@ -127,12 +128,17 @@ const Storage = (() => {
   };
 
   // ── Admin ─────────────────────────────────────────────────────────────────
-  let runtimeRole='player';
+  let runtimeRole='player', authorizedRole='player';
   const getRole=()=>runtimeRole;
+  const getAuthorizedRole=()=>authorizedRole;
+  const isAuthorizedAdmin=()=>authorizedRole==='admin'||authorizedRole==='owner';
+  const isAdminModeActive=()=>authorizedRole==='owner'||(authorizedRole==='admin'&&localStorage.getItem(K.ADMIN_MODE)==='true');
   const isAdmin=()=>runtimeRole==='admin'||runtimeRole==='owner';
   const isOwner=()=>runtimeRole==='owner';
-  const setRole=role=>{runtimeRole=['player','admin','owner'].includes(role)?role:'player';};
-  const setAdmin=v=>setRole(v?'admin':'player');
+  const setAuthorizedRole=role=>{authorizedRole=['admin','owner'].includes(role)?role:'player';runtimeRole=authorizedRole==='owner'?'owner':authorizedRole==='admin'&&isAdminModeActive()?'admin':'player';if(authorizedRole==='player')localStorage.removeItem(K.ADMIN_MODE);};
+  const setAdminMode=active=>{if(authorizedRole!=='admin')return false;localStorage.setItem(K.ADMIN_MODE,active?'true':'false');runtimeRole=active?'admin':'player';return true;};
+  const setRole=setAuthorizedRole;
+  const setAdmin=v=>{if(authorizedRole==='admin')setAdminMode(v);else setAuthorizedRole(v?'admin':'player');};
 
   // ── Nick persistente do usuário ───────────────────────────────────────
   // Guardamos o nick que o dispositivo usou para confirmar presença pela
@@ -165,7 +171,7 @@ const Storage = (() => {
     getSessions, addSession, updateSession, deleteSession,
     addConfirmed, replaceConfirmed, removeConfirmed,
     getMyConfirmation, setMyConfirmation,
-    isAdmin, isOwner, getRole, setRole, setAdmin,
+    isAdmin, isOwner, getRole, getAuthorizedRole, isAuthorizedAdmin, isAdminModeActive, setAuthorizedRole, setAdminMode, setRole, setAdmin,
     getMyNick, setMyNick, getNickEdits, incrementNickEdits,
     getScoringConfig, setScoringConfig, calculateRank,
     getCurrentSeason,

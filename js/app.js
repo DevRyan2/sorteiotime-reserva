@@ -43,14 +43,14 @@ const UI = (() => {
 
   // ── Admin ──────────────────────────────────────────────────────────────────
   const toggleAdmin = async () => {
-    if (Storage.isAdmin()) {
-      if(firebase.auth().currentUser?.isAnonymous){toast('🔑 Este dispositivo recebeu acesso de ADM automaticamente.');return;}
-      firebase.auth().signOut().then(() => firebase.auth().signInAnonymously()).catch(()=>{});
-      Storage.setRole('player');
+    if(Storage.isOwner()){toast('👑 O modo do Dono permanece sempre ativo.');return;}
+    if(Storage.getAuthorizedRole()==='admin'){
+      const active=Storage.isAdminModeActive();
+      Storage.setAdminMode(!active);
       renderAdminBtn();
-      toast('🔓 Modo admin desativado');
+      toast(active?'🔓 Modo ADM desativado temporariamente. Sua autorização foi mantida.':'🔑 Modo ADM ativado novamente.');
       showTab(activeTab);
-    } else {
+    }else{
       $('admin-password').value = '';
       if($('admin-email'))$('admin-email').value='';
       $('admin-error')?.classList.add('hidden');
@@ -85,8 +85,9 @@ const UI = (() => {
     const btn       = $('admin-btn');
     const scoringBtn= $('btn-scoring-config');
     if (!btn) return;
-    btn.textContent = Storage.isOwner() ? '👑 Dono' : Storage.isAdmin() ? '🔑 ADM' : '🔒 Admin';
+    btn.textContent = Storage.isOwner() ? '👑 Dono' : Storage.getAuthorizedRole()==='admin' ? (Storage.isAdmin()?'🔓 Sair do modo ADM':'🔑 Entrar no modo ADM') : '🔒 Admin';
     btn.classList.toggle('admin-active', Storage.isAdmin());
+    btn.title=Storage.getAuthorizedRole()==='admin'?'Sua autorização de ADM permanece salva até o Dono removê-la.':'Acesso administrativo';
     if (scoringBtn) scoringBtn.style.display = 'none';
   };
 
@@ -772,9 +773,9 @@ const UI = (() => {
     wrap.innerHTML='<div class="card profile-loading">⏳ Carregando seu perfil…</div>';
     try {
       const user=firebase.auth().currentUser;
-      const account=user&&!user.isAnonymous&&!Storage.isAdmin()?`<div class="card" style="margin-bottom:14px"><div class="card-title">Conta do jogador</div><p class="hint">${escapeHTML(user.displayName||'Jogador')} · ${escapeHTML(user.email||'')}</p><button class="btn btn-ghost btn-sm" onclick="UI.signOutPlayerAccount()">Sair da conta</button></div>`:`<div class="card" style="margin-bottom:14px"><div class="card-title">Acesse seu perfil em qualquer dispositivo</div><p class="hint">Crie uma conta ou entre para reivindicar e manter seu perfil.</p><button class="btn btn-primary btn-sm" onclick="UI.openPlayerAccount()">Criar conta / Entrar</button></div>`;
+      const account=user&&!user.isAnonymous&&Storage.getRole()!=='admin'?`<div class="card" style="margin-bottom:14px"><div class="card-title">Conta do jogador</div><p class="hint">${escapeHTML(user.displayName||'Jogador')} · ${escapeHTML(user.email||'')}</p><button class="btn btn-ghost btn-sm" onclick="UI.signOutPlayerAccount()">Sair da conta</button></div>`:`<div class="card" style="margin-bottom:14px"><div class="card-title">Acesse seu perfil em qualquer dispositivo</div><p class="hint">Crie uma conta ou entre para manter seu perfil.</p><button class="btn btn-primary btn-sm" onclick="UI.openPlayerAccount()">Criar conta / Entrar</button></div>`;
       const profile=await DB.getMyProfile();
-      if(!profile){wrap.innerHTML=account+'<div class="card"><p class="profile-state-text">Você ainda não possui um perfil. Para receber um perfil existente, aguarde o link seguro enviado diretamente pelo Dono.</p></div>';return;}
+      if(!profile){wrap.innerHTML=account+'<div class="card"><p class="profile-state-text">Você ainda não possui um perfil. O link não é enviado automaticamente por e-mail: peça ao Dono para abrir seu perfil, clicar em <b>Transferir perfil</b> e enviar o link para você por WhatsApp ou outro meio.</p></div>';return;}
       const html=Players.renderProfile(profile.nick);
       if(!html){wrap.innerHTML='<div class="card profile-loading">⏳ Sincronizando estatísticas do Firebase…</div>';return;}
       wrap.innerHTML=account+`<div class="card profile-card">${html}</div>`;
@@ -1529,7 +1530,7 @@ const UI = (() => {
       if (activeTab === 'partidas') renderSessions();
       if (activeTab === 'torneio') renderTorneioTab();
       if (activeTab === 'jogadores') renderJogadoresTab();
-      if(location.hash.startsWith('#transfer=')&&firebase.auth().currentUser&&!firebase.auth().currentUser.isAnonymous&&!Storage.isAdmin())setTimeout(handleHash,100);
+      if(location.hash.startsWith('#transfer=')&&firebase.auth().currentUser&&!firebase.auth().currentUser.isAnonymous&&Storage.getRole()!=='admin')setTimeout(handleHash,100);
     });
     $('modal-admin-close')?.addEventListener('click', () => $('modal-admin')?.classList.add('hidden'));
     $('btn-admin-login')?.addEventListener('click', submitAdminLogin);

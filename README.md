@@ -53,6 +53,8 @@ Crie a conta do proprietário em **Authentication > Users**. Copie o UID dessa c
 
 Depois disso, o DONO concede e remove o cargo `admin` pela aba Jogadores. Um jogador pode copiar o código do próprio dispositivo (seu `auth.uid`) e enviá-lo ao DONO; o cargo passa a aparecer em tempo real, sem senha. As regras impedem que um ADM promova usuários, altere cargos ou modifique o registro do DONO. O acesso do ADM fica vinculado à credencial anônima daquele navegador, portanto limpar os dados do site remove o acesso local e exige nova autorização.
 
+O botão administrativo separa autorização e modo ativo. Desativar o modo ADM apenas oculta temporariamente as funções administrativas naquele navegador; não encerra a autenticação, não troca o UID e não remove `/roles/{uid}`. O próprio ADM autorizado pode reativar o modo. Somente o DONO pode remover definitivamente o cargo no banco.
+
 ### 4. Configuração web
 
 Preencha [js/firebase-config.js](js/firebase-config.js) com a configuração web exibida pelo Firebase Console:
